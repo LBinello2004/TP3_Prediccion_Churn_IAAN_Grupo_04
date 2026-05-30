@@ -85,3 +85,87 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** hacer todo el EDA manualmente desde cero; aceptar automaticamente cualquier hallazgo generado por IA sin revision.
 
 **Consecuencias:** el notebook EDA sirve como borrador tecnico y fuente de evidencia. Las conclusiones finales se escriben despues de revisar si los resultados tienen sentido de negocio.
+
+## Decision 8 - Cerrar el set inicial de hipotesis en 6
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** no agregar mas hipotesis por ahora y trabajar con las 6 hipotesis ya escritas en `reports/01_hipotesis.md`. Teniendo en consideración la opción de agregar nuevas hipótesis en un futuro.
+
+**Por que:** agregar hipotesis nuevas en este momento puede dispersar el analisis. Preferimos revisar criticamente el EDA actual, entender que hipotesis se sostienen y recien despues decidir si hace falta abrir nuevas lineas.
+
+**Alternativas descartadas:** seguir sumando hipotesis combinadas o mas especificas antes de terminar la revision del EDA inicial.
+
+**Consecuencias:** el proximo foco es evaluar la calidad del EDA y separar hallazgos fuertes, debiles y contraintuitivos.
+
+## Decision 9 - Documentar el EDA como reporte revisable
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** crear `reports/03_eda.md` como sintesis del EDA inicial, separando hallazgos fuertes, moderados, debiles y contraintuitivos.
+
+**Por que:** el notebook contiene evidencia tecnica, pero el equipo necesita una version legible para revisar manualmente que conclusiones son defendibles y cuales requieren profundizacion.
+
+**Alternativas descartadas:** dejar los resultados solo dentro del notebook; escribir conclusiones finales sin revision manual.
+
+**Consecuencias:** `reports/03_eda.md` funciona como puente entre notebook tecnico y futuro reporte ejecutivo.
+
+## Decision 10 - Usar el dataset procesado para el EDA inicial
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** ejecutar el EDA inicial sobre `data/processed/datos_limpios.csv`.
+
+**Por que:** el dataset procesado conserva las 5630 filas y resuelve los faltantes numericos mediante la limpieza definida previamente. Esto permite graficar y testear hipotesis sin perder registros por nulos.
+
+**Alternativas descartadas:** hacer el EDA directamente sobre `data/raw/datos.csv` y dropear nulos variable por variable en cada analisis.
+
+**Consecuencias:** las conclusiones del EDA deben leerse como resultados sobre datos imputados. Para hallazgos sensibles, conviene revisar si se mantienen sobre el dataset raw.
+
+## Decision 11 - Elegir tests estadisticos segun tipo de variable
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** usar Mann-Whitney U para variables numericas contra `Churn` y chi-cuadrado para variables categoricas u ordinales contra `Churn`.
+
+**Por que:** `Churn` es binaria y varias variables numericas no parecen normales ni necesariamente comparables por media. Mann-Whitney permite comparar distribuciones sin asumir normalidad. Chi-cuadrado permite evaluar asociacion entre variables categoricas y el target.
+
+**Alternativas descartadas:** usar solo comparaciones visuales; usar t-test para todas las variables numericas; interpretar diferencias sin test.
+
+**Consecuencias:** cada hipotesis tiene respaldo estadistico, pero el p-valor no se toma como conclusion final sin mirar tamano de efecto y sentido de negocio.
+
+## Decision 12 - No interpretar p-value como importancia de negocio
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** evaluar cada hipotesis mirando p-valor, tamano de efecto, direccion del resultado y lectura comercial.
+
+**Por que:** con 5630 registros, diferencias chicas pueden resultar estadisticamente significativas. Un p-valor bajo no implica automaticamente que la variable sea importante para negocio o para un futuro modelo.
+
+**Alternativas descartadas:** clasificar hipotesis como confirmadas solo porque `p < 0.05`.
+
+**Consecuencias:** `OrderCount` queda tratado como hallazgo debil: tiene diferencia estadistica, pero bajo tamano de efecto y poca separacion practica.
+
+## Decision 13 - Tratar resultados contraintuitivos como hallazgos a revisar
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** no forzar las hipotesis que salieron en direccion contraria a lo esperado.
+
+**Por que:** `SatisfactionScore` y `DaySinceLastOrder` muestran patrones contrarios a la intuicion inicial. En vez de descartarlos o maquillarlos, se documentan como hallazgos contraintuitivos que requieren revision manual.
+
+**Alternativas descartadas:** reescribir la conclusion para que parezca que las hipotesis se confirmaron; eliminar estos resultados por incomodos.
+
+**Consecuencias:** el reporte 03 marca estas variables como puntos de revision antes de usarlas en conclusiones ejecutivas o modelado.
+
+## Decision 14 - Priorizar claridad visual sobre graficos tecnicamente completos
+
+**Fecha:** 2026-05-30
+
+**Que decidimos:** reemplazar o evitar graficos dificiles de leer cuando no ayudan a comunicar el hallazgo principal.
+
+**Por que:** la entrega tiene foco de negocio. Un grafico tecnicamente correcto puede no servir si el lector no entiende rapido que decision o patron muestra.
+
+**Alternativas descartadas:** usar boxplots o distribuciones densas para todas las variables por defecto.
+
+**Consecuencias:** se prefieren graficos simples y defendibles: tasas por segmento, lineas para variables ordinales, y visualizaciones que conecten directamente con la hipotesis.
