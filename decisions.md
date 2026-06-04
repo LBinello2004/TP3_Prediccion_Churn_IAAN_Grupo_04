@@ -181,3 +181,64 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** incluir la variable sin advertencia; excluirla completamente del modelo.
 
 **Consecuencias:** si se incluye en el modelo, hay que advertir en el reporte que su interpretacion no es causal. No debe usarse como señal de alerta temprana en un sistema de retencion real.
+
+## Decision 16 - Ampliar el EDA con hipotesis principales H7-H8
+
+**Fecha:** 2026-06-04
+
+**Que decidimos:** agregar al EDA guiado por hipotesis solo dos hipotesis principales: reclamos y satisfaccion, y segmento VIP en riesgo.
+
+**Por que:** estas hipotesis agregan interaccion y priorizacion comercial con lectura de negocio, sin dispersar el analisis con demasiadas variantes opcionales.
+
+**Alternativas descartadas:** mantener las hipotesis de beneficios inefectivos, frecuencia ajustada y valor del cliente como hipotesis principales.
+
+**Consecuencias:** el notebook `notebooks/2. EDA guiado por hipotesis.ipynb` mantiene H1-H6 intactas y suma H7-H8 como extension del EDA.
+
+## Decision 17 - Usar heatmap para H7
+
+**Fecha:** 2026-06-04
+
+**Que decidimos:** representar H7 con un heatmap de `Complain` por `SatisfactionScore`, usando color para la tasa de churn y anotaciones con porcentaje y tamano de muestra.
+
+**Por que:** H7 es una hipotesis de interaccion. Un heatmap permite ver rapidamente como cambia el churn al combinar reclamos y satisfaccion, y evita ocultar patrones raros al resumir satisfaction en pocos grupos.
+
+**Alternativas descartadas:** usar un grafico de barras por segmentos combinados.
+
+**Consecuencias:** el EDA comunica mejor que `Complain` eleva el churn en todos los niveles de satisfaccion, mientras que `SatisfactionScore` no se comporta de forma lineal simple.
+
+## Decision 18 - Agregar clustering exploratorio al EDA
+
+**Fecha:** 2026-06-04
+
+**Que decidimos:** agregar al final del notebook EDA una seccion exploratoria de clustering con K-Means, metodo del codo e indice de silueta.
+
+**Por que:** queremos evaluar si existen segmentos naturales de clientes que puedan servir como base para futuras hipotesis de negocio, sin forzar todavia una conclusion.
+
+**Alternativas descartadas:** convertir los clusters directamente en hipotesis confirmadas; incluir `Churn` o `CustomerID` como variables de entrada del clustering.
+
+**Consecuencias:** los clusters se interpretan como segmentacion candidata. Si se usan mas adelante, hay que validar si aportan informacion adicional frente a variables ya fuertes como `Tenure`, `OrderCount` y `CashbackAmount`.
+
+## Decision 19 - Descartar clusters del EDA final
+
+**Fecha:** 2026-06-04
+
+**Que decidimos:** sacar la seccion de clustering del notebook EDA y del reporte `reports/03_eda.md`.
+
+**Por que:** el metodo del codo no mostro una separacion clara y la mejor silueta fue baja (`k = 2`, silhouette = 0.143). Aunque los clusters mostraban cierta diferencia de churn, no identificaban segmentos suficientemente solidos como para sostener nuevas hipotesis.
+
+**Alternativas descartadas:** mantener los clusters como bloque exploratorio; convertirlos en hipotesis nuevas; usar clusters con mas valores de `k` pese a menor silueta.
+
+**Consecuencias:** el EDA queda enfocado en hipotesis defendibles. Si mas adelante se quiere segmentar clientes, conviene probar otra estrategia de segmentacion o partir de reglas de negocio mas interpretables.
+
+
+## Decision 20 - Descartar PCA del EDA final
+
+**Fecha:** 2026-06-04
+
+**Que decidimos:** sacar por completo el analisis PCA del notebook EDA, del reporte `reports/03_eda.md` y de los outputs.
+
+**Por que:** aunque se probo como analisis factorial exploratorio, las visualizaciones no aportaron una lectura suficientemente clara o accionable para el EDA de churn. Mantenerlo podia distraer de las hipotesis principales y generar una interpretacion mas compleja de lo necesario.
+
+**Alternativas descartadas:** convertir PC1 en una hipotesis de actividad transaccional; mantener PCA solo como apendice exploratorio; usar criterio eigenvalue > 1 para justificar componentes retenidos.
+
+**Consecuencias:** el EDA queda enfocado en hipotesis de negocio mas directas y defendibles. Si en el futuro se necesita reduccion dimensional, se deberia evaluar en una etapa metodologica separada y no como parte central del EDA guiado por hipotesis.

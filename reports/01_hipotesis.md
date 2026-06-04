@@ -70,3 +70,24 @@ Completar al menos 5 hipotesis. Para cada una, escribir:
 **Variables involucradas:** `DaySinceLastOrder`, `Churn`.
 
 **Resultado esperado:** Esperamos que los clientes con `Churn = 1` tengan mayor cantidad de días desde su última orden que los clientes con `Churn = 0`.
+## H7
+
+**Enunciado:** Los clientes que realizaron reclamos (`Complain = 1`) y tienen baja satisfaccion presentan el mayor riesgo de churn.
+
+**Motivacion de negocio:** No todos los reclamos terminan en abandono. El problema aparece cuando el reclamo se combina con una experiencia percibida como mala o poco satisfactoria.
+
+**Variables involucradas:** `Complain`, `SatisfactionScore`, `Churn`.
+
+**Resultado esperado:** Esperamos que la tasa de churn sea mayor en clientes con reclamo y satisfaccion baja que en el resto de los segmentos.
+
+## H8
+
+**Enunciado:** Dentro de los clientes de mayor valor economico, aquellos que realizaron reclamos tienen una tasa de churn desproporcionadamente alta.
+
+**Motivacion de negocio:** La perdida de un cliente valioso genera un impacto economico mayor que la perdida de un cliente ocasional. Detectar clientes VIP con reclamos permite priorizar acciones de retencion con mejor retorno esperado.
+
+**Variables involucradas:** `OrderCount`, `CashbackAmount`, `Complain`, `Churn`.
+
+**Variable creada:** `ValorCliente = OrderCount * CashbackAmount`; segmento VIP = cuartil superior de `ValorCliente`.
+
+**Resultado esperado:** Esperamos que, dentro del segmento VIP, los clientes con `Complain = 1` tengan una tasa de churn mayor que los VIP sin reclamos.

@@ -120,3 +120,41 @@ El equipo debe revisar manualmente este EDA y decidir:
 2. Que hipotesis requieren graficos adicionales.
 3. Que variables deben discutirse como limitacion o warning metodologico.
 4. Que conclusiones todavia no estan listas para defender oralmente.
+## Actualizacion: nuevas hipotesis H7-H8
+
+Se agregaron dos hipotesis principales al notebook `notebooks/2. EDA guiado por hipotesis.ipynb`, manteniendo intacto el analisis previo de H1-H6. Estas hipotesis incorporan interacciones y segmentacion de valor para profundizar los hallazgos originales.
+
+### H7 - Reclamos y satisfaccion
+
+**Hipotesis:** Los clientes que realizaron reclamos (`Complain = 1`) y tienen baja satisfaccion presentan el mayor riesgo de churn.
+
+**Resultado:** La combinacion de reclamos y satisfaccion muestra una asociacion estadisticamente significativa con churn. El test chi-cuadrado arroja p-valor < 0.001 y Cramer's V = 0.282. Sin embargo, el segmento con baja satisfaccion y reclamo no es el de mayor churn: presenta 22.1%, mientras que los clientes con reclamo y satisfaccion alta llegan a 37.3% y con satisfaccion media a 36.2%.
+
+**Lectura de negocio:** La parte fuerte de la hipotesis es el efecto del reclamo: reclamar aumenta claramente el riesgo en todos los niveles de satisfaccion. La parte debil es asumir que la baja satisfaccion explica por si sola el mayor riesgo. El resultado refuerza que `SatisfactionScore` debe interpretarse con cautela, como ya habia ocurrido en H3.
+
+**Estado:** Hallazgo fuerte para `Complain`; interaccion contraintuitiva con `SatisfactionScore`.
+
+### H8 - Segmento VIP en riesgo
+
+**Hipotesis:** Dentro de los clientes de mayor valor economico, aquellos que realizaron reclamos tienen una tasa de churn desproporcionadamente alta.
+
+**Variable creada:** `ValorCliente = OrderCount * CashbackAmount`; segmento VIP = cuartil superior de `ValorCliente`.
+
+**Resultado:** La hipotesis se sostiene con claridad. Dentro del segmento VIP, los clientes sin reclamo tienen churn de 8.3%, mientras que los VIP con reclamo llegan a 27.0%. El test chi-cuadrado arroja p-valor < 0.001 y Cramer's V = 0.243.
+
+**Lectura de negocio:** Este es uno de los hallazgos mas accionables: combina riesgo de abandono con impacto economico. El segmento VIP con reclamo deberia ser candidato prioritario para acciones de retencion.
+
+**Estado:** Hallazgo fuerte y accionable.
+
+## Priorizacion adicional H7-H8
+
+| Prioridad | Hipotesis | Estado | Motivo |
+|---|---|---|---|
+| Alta | H8 - VIP en riesgo | Fuerte | Segmento de alto valor con reclamo multiplica el churn y permite priorizar retencion. |
+| Alta | H7 - Reclamos y satisfaccion | Fuerte / contraintuitiva | Confirma el peso de reclamos, pero satisfaction no ordena el riesgo como se esperaba. |
+
+## Nuevos puntos para revision manual
+
+1. No usar `SatisfactionScore` como variable lineal simple sin explicar sus patrones contraintuitivos.
+2. Interpretar `ValorCliente` como proxy de intensidad comercial para segmentar clientes VIP, no como rentabilidad real.
+3. Priorizar el segmento VIP con reclamos como hallazgo defendible para negocio.
