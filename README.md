@@ -48,8 +48,8 @@ Ejecutar los notebooks en orden: primero `1. Limpieza de datos.ipynb`, luego `2.
 | `Complain` | Fuerte: tasa de churn 31.7% con reclamos vs 10.9% sin reclamos |
 | `CashbackAmount` | Moderado: cashback menor en clientes que churnearon |
 | `OrderCount` | Debil: diferencia estadistica con bajo efecto practico |
-| `SatisfactionScore` | Contraintuitivo: patron opuesto a la hipotesis inicial |
-| `DaySinceLastOrder` | Contraintuitivo: churners con menos dias desde ultima orden |
+| `SatisfactionScore` | Contraintuitivo: se esperaba mayor churn en scores bajos, pero los scores altos muestran mayor tasa de abandono |
+| `DaySinceLastOrder` | Contraintuitivo: se esperaba mayor churn con mas dias de inactividad, pero los churners tienen mediana de 2 dias vs 4 dias en activos |
 
 ## Entregas
 
