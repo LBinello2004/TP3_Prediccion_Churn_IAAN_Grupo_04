@@ -1,0 +1,60 @@
+# TP3 - Prediccion de Churn | Grupo 04
+
+Trabajo Practico 3 de Inteligencia Artificial Aplicada a los Negocios (81.91) - ITBA.
+
+El objetivo es predecir que clientes de un e-commerce tienen mayor probabilidad de abandonar la plataforma, y traducir esos resultados en acciones de retencion accionables para el negocio.
+
+## Dataset
+
+- **Fuente:** `data/raw/datos.csv`
+- **Registros:** 5630 clientes
+- **Variables:** 20 columnas (1 ID + 1 target `Churn` + 18 features)
+- **Desbalance:** ~17% clase positiva (churn = 1)
+
+## Estructura del repositorio
+
+```
+data/
+  raw/           # Dataset original sin modificar
+  processed/     # Dataset limpio con imputacion KNN
+notebooks/
+  1. Limpieza de datos.ipynb          # Auditoria de calidad e imputacion
+  2. EDA guiado por hipotesis.ipynb   # Validacion de 6 hipotesis de negocio
+outputs/
+  eda/           # Graficos generados por el EDA
+reports/
+  00_contexto_negocio.md  # Pregunta de negocio y criterio de exito
+  01_hipotesis.md         # Hipotesis escritas por el equipo antes del EDA
+  02_data_quality.md      # Auditoria de calidad del dataset
+  03_eda.md               # Resumen de hallazgos: fuertes, moderados, contraintuitivos
+decisions.md     # Log de decisiones tecnicas y metodologicas
+requirements.txt
+```
+
+## Como ejecutar
+
+```bash
+pip install -r requirements.txt
+jupyter notebook
+```
+
+Ejecutar los notebooks en orden: primero `1. Limpieza de datos.ipynb`, luego `2. EDA guiado por hipotesis.ipynb`.
+
+## Hallazgos principales del EDA
+
+| Variable | Resultado |
+|---|---|
+| `Tenure` | Fuerte: mediana de 1 mes en churners vs 10 meses en activos |
+| `Complain` | Fuerte: tasa de churn 31.7% con reclamos vs 10.9% sin reclamos |
+| `CashbackAmount` | Moderado: cashback menor en clientes que churnearon |
+| `OrderCount` | Debil: diferencia estadistica con bajo efecto practico |
+| `SatisfactionScore` | Contraintuitivo: patron opuesto a la hipotesis inicial |
+| `DaySinceLastOrder` | Contraintuitivo: churners con menos dias desde ultima orden |
+
+## Entregas
+
+| Fecha | Contenido |
+|---|---|
+| 05/06 | EDA + repo GitHub |
+| 12/06 | Notebook de modelado + `decisions.md` |
+| 19/06 | Reporte ejecutivo PDF + defensa oral |
