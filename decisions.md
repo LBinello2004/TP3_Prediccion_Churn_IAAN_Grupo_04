@@ -169,3 +169,15 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** usar boxplots o distribuciones densas para todas las variables por defecto.
 
 **Consecuencias:** se prefieren graficos simples y defendibles: tasas por segmento, lineas para variables ordinales, y visualizaciones que conecten directamente con la hipotesis.
+
+## Decision 15 - Interpretar DaySinceLastOrder como descriptor retroactivo, no predictor
+
+**Fecha:** 2026-06-04
+
+**Que decidimos:** no usar `DaySinceLastOrder` como predictor confiable en produccion y documentarlo como limitacion metodologica en el reporte ejecutivo.
+
+**Por que:** los datos muestran que los clientes con 0 dias desde su ultima orden tienen la tasa de churn mas alta (34.3%), lo que es opuesto a la intuicion. La explicacion es que la variable no captura inactividad previa al churn: el cliente hace una compra, nunca vuelve, y cuando el sistema registra el churn mide los dias desde esa ultima compra. La variable describe el evento retroactivamente. En produccion, al momento de querer actuar, no es posible saber si la ultima compra de un cliente va a ser su ultima compra.
+
+**Alternativas descartadas:** incluir la variable sin advertencia; excluirla completamente del modelo.
+
+**Consecuencias:** si se incluye en el modelo, hay que advertir en el reporte que su interpretacion no es causal. No debe usarse como señal de alerta temprana en un sistema de retencion real.
