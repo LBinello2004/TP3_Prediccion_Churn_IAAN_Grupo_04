@@ -242,3 +242,27 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** convertir PC1 en una hipotesis de actividad transaccional; mantener PCA solo como apendice exploratorio; usar criterio eigenvalue > 1 para justificar componentes retenidos.
 
 **Consecuencias:** el EDA queda enfocado en hipotesis de negocio mas directas y defendibles. Si en el futuro se necesita reduccion dimensional, se deberia evaluar en una etapa metodologica separada y no como parte central del EDA guiado por hipotesis.
+
+## Decision 21 - Crear el split train/test antes de cualquier transformacion de modelado
+
+**Fecha:** 2026-06-05
+
+**Que decidimos:** iniciar el notebook de training desde `data/raw/datos.csv` y crear un split train/test estratificado 80/20 con `random_state=42`.
+
+**Por que:** el target `Churn` esta desbalanceado (~16.8% clase positiva), por lo que el split debe preservar la proporcion de churners. Ademas, para evitar leakage, la imputacion, el escalado, el encoding y la seleccion de variables deben aprenderse solo dentro de train/CV, no sobre toda la base antes del split.
+
+**Alternativas descartadas:** entrenar usando directamente `data/processed/datos_limpios.csv`; hacer un split no estratificado; guardar datasets train/test duplicados con transformaciones ya aplicadas.
+
+**Consecuencias:** el notebook `notebooks/3. Training.ipynb` guarda los CSVs del holdout en `data/processed/split/` (`train.csv`, `test.csv`, `X_train.csv`, `X_test.csv`, `y_train.csv`, `y_test.csv`, indices y resumen). El test set queda reservado para la evaluacion final.
+
+## Decision 22 - Estandarizar categorias equivalentes antes del encoding
+
+**Fecha:** 2026-06-05
+
+**Que decidimos:** normalizar categorias repetidas en el notebook de limpieza antes de guardar `data/processed/datos_limpios.csv`: `COD` se unifica como `Cash on Delivery`, `CC` como `Credit Card`, `Phone` como `Mobile Phone`, y `Mobile` como `Mobile Phone` en `PreferedOrderCat`.
+
+**Por que:** las categorias representan el mismo concepto de negocio pero estaban escritas con etiquetas distintas. Si se codifican sin estandarizar, el modelo recibe columnas dummy duplicadas artificialmente y reparte la misma senal entre categorias equivalentes.
+
+**Alternativas descartadas:** dejar las categorias tal como vienen en el raw; corregirlas solamente en el pipeline de modelado; corregirlas manualmente solo en los CSVs de split.
+
+**Consecuencias:** el EDA queda alimentado por `datos_limpios.csv` con categorias consolidadas, y el pipeline de modelado ya no necesita hacer esta limpieza. Las features transformadas quedan en 33 columnas.

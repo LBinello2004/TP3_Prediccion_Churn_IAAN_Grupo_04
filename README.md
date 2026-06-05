@@ -17,9 +17,16 @@ El objetivo es predecir que clientes de un e-commerce tienen mayor probabilidad 
 data/
   raw/           # Dataset original sin modificar
   processed/     # Dataset limpio con imputacion KNN
+    split/       # CSVs de train/test, X/y, indices y resumen del holdout
+    features_train.parquet  # Features transformadas para modelado
+    features_test.parquet   # Features transformadas para modelado
 notebooks/
   1. Limpieza de datos.ipynb          # Auditoria de calidad e imputacion
   2. EDA guiado por hipotesis.ipynb   # Validacion de 6 hipotesis de negocio
+  3. Training.ipynb                   # Split train/test y preparacion para modelado
+src/
+  features/
+    pipeline.py  # Pipeline reproducible de feature engineering
 outputs/
   eda/           # Graficos generados por el EDA
 reports/
@@ -27,6 +34,8 @@ reports/
   01_hipotesis.md         # Hipotesis escritas por el equipo antes del EDA
   02_data_quality.md      # Auditoria de calidad del dataset
   03_eda.md               # Resumen de hallazgos: fuertes, moderados, contraintuitivos
+  feature_report.md       # Transformaciones aplicadas para modelado
+  handoff_to_modeler.md   # Contrato para la etapa de modelos
 decisions.md     # Log de decisiones tecnicas y metodologicas
 requirements.txt
 ```
@@ -38,7 +47,7 @@ pip install -r requirements.txt
 jupyter notebook
 ```
 
-Ejecutar los notebooks en orden: primero `1. Limpieza de datos.ipynb`, luego `2. EDA guiado por hipotesis.ipynb`.
+Ejecutar los notebooks en orden: primero `1. Limpieza de datos.ipynb`, luego `2. EDA guiado por hipotesis.ipynb` y despues `3. Training.ipynb`.
 
 ## Hallazgos principales del EDA
 
