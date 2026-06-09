@@ -8,5 +8,4 @@ env/
 .DS_Store
 Thumbs.db
 
-outputs/models/*
-!outputs/models/.gitkeep
+outputs/models/*.pkl

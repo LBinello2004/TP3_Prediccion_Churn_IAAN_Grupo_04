@@ -18,7 +18,7 @@ TARGET_COL = "Churn"
 DROP_COLUMNS = [
     ID_COL,
     TARGET_COL,
-    "DaySinceLastOrder",
+    "DaySinceLastOrder", #See Decision 15 for dropping criteria
 ]
 
 CATEGORICAL_FEATURES = [

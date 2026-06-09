@@ -266,3 +266,75 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** dejar las categorias tal como vienen en el raw; corregirlas solamente en el pipeline de modelado; corregirlas manualmente solo en los CSVs de split.
 
 **Consecuencias:** el EDA queda alimentado por `datos_limpios.csv` con categorias consolidadas, y el pipeline de modelado ya no necesita hacer esta limpieza. Las features transformadas quedan en 33 columnas.
+
+## Decision 23 - Usar ROC-AUC como metrica principal de modelado
+
+**Fecha:** 2026-06-08
+
+**Que decidimos:** evaluar y comparar todos los modelos usando ROC-AUC como metrica principal, y reportar ademas F1, recall y precision.
+
+**Por que:** el dataset tiene desbalance de clases (~17% churn). Accuracy es misleading: un modelo que predice "nadie churna" alcanza 83% sin aprender nada. ROC-AUC mide separabilidad independientemente del umbral y es robusta al desbalance. Recall es critico para el negocio porque falsos negativos (churners no detectados) tienen mayor costo que falsos positivos.
+
+**Alternativas descartadas:** usar accuracy como metrica principal; usar solo F1 sin ROC-AUC.
+
+**Consecuencias:** el GridSearchCV usa `scoring='roc_auc'` para seleccionar el mejor modelo. El reporte final incluye la curva ROC, matriz de confusion y el reporte de clasificacion completo por clase.
+
+## Decision 24 - Agregar 4 features derivadas de negocio al pipeline
+
+**Fecha:** 2026-06-08
+
+**Que decidimos:** incorporar en `src/features/pipeline.py` cuatro features construidas a partir de los hallazgos del EDA: `valor_cliente_proxy`, `coupon_per_order`, `cashback_per_order` y `complain_x_satisfaction`.
+
+**Por que:** el EDA mostro que el churn esta asociado a combinaciones de variables, no solo a variables individuales. `valor_cliente_proxy` (OrderCount * CashbackAmount) captura el valor economico del cliente. `coupon_per_order` y `cashback_per_order` normalizan beneficios por nivel de actividad. `complain_x_satisfaction` captura la interaccion de H7: un reclamo en presencia de alta satisfaccion tiene distinto significado que en baja satisfaccion.
+
+**Alternativas descartadas:** usar solo las variables originales sin derivar; incluir mas interacciones combinatorias entre todas las variables del EDA.
+
+**Consecuencias:** el pipeline pasa de 29 a 33 columnas. El analisis SHAP permite verificar si las features derivadas aportan informacion adicional frente a las originales.
+
+## Decision 25 - Elegir Random Forest como modelo principal
+
+**Fecha:** 2026-06-08
+
+**Que decidimos:** usar Random Forest como modelo principal para la evaluacion en test set y para el analisis SHAP. El Decision Tree optimizado se mantiene como comparacion baseline interpretable.
+
+**Por que:** los resultados de CV son concluyentes: RF logro ROC-AUC 0.9791 frente a 0.9115 del DT optimizado y 0.8715 del baseline. En test set: RF ROC-AUC 0.9976, recall 96.3%, F1 93.4% frente a DT ROC-AUC 0.9415, F1 77.9%. La diferencia es suficientemente grande como para justificar el modelo mas complejo.
+
+**Alternativas descartadas:** usar el DT optimizado como modelo principal por mayor interpretabilidad; reportar solo el baseline como pide la consigna y omitir RF.
+
+**Consecuencias:** el reporte ejecutivo y la defensa oral se apoyan en Random Forest para metricas finales y en SHAP para explicabilidad. El DT se menciona como baseline y para mostrar la regla de decision mas simple.
+
+## Decision 26 - Mejores hiperparametros del Random Forest (run 2026-06-08)
+
+**Fecha:** 2026-06-08
+
+**Que decidimos:** usar `n_estimators=200`, `max_depth=None`, `min_samples_leaf=1`, `max_features='sqrt'`, `class_weight='balanced'` como configuracion final del Random Forest.
+
+**Por que:** estos parametros surgieron del GridSearchCV con 48 combinaciones y CV estratificada de 5 folds. `max_depth=None` indica que los arboles crecen hasta hojas puras, lo que con `min_samples_leaf=1` puede implicar cierto overfitting en train, pero el ROC-AUC de test (0.9976) supera al CV (0.9791), lo que confirma que el modelo generaliza bien.
+
+**Alternativas descartadas:** limitar `max_depth` para reducir complejidad; usar `class_weight='balanced_subsample'` que no fue el mejor en CV.
+
+**Consecuencias:** el modelo final queda guardado en `outputs/models/best_rf.pkl`. Si se corre el notebook en otro ambiente, el GridSearch puede devolver parametros ligeramente distintos dependiendo de la version de scikit-learn.
+
+## Decision 27 - Presentar dos umbrales de clasificacion segun costo de negocio
+
+**Fecha:** 2026-06-08
+
+**Que decidimos:** no fijar un umbral unico de produccion. Presentar dos opciones con sus tradeoffs cuantificados para que el negocio elija segun el costo real de sus acciones de retencion.
+
+**Por que:** perder un cliente churner tiene costo permanente (revenue perdido, boca a boca negativo). Contactar a un no-churner con una accion de retencion tiene costo bajo y reversible. El umbral optimo depende de esa asimetria, que el equipo de negocio conoce mejor que el modelo. Umbral 0.35: recall 100% (190/190 churners detectados), precision 78%, 53 falsos positivos. Umbral 0.465 (F2-optimo, recall pesa el doble que precision): recall 98.4% (187/190), 3 churners perdidos, 21 falsos positivos.
+
+**Alternativas descartadas:** fijar el umbral en 0.5 default (deja 7 churners sin detectar); optimizar scoring='recall' en GridSearchCV (innecesario con ROC-AUC 0.9976: la separabilidad ya es excelente, el ajuste fino es de umbral, no de hiperparametros).
+
+**Consecuencias:** el reporte ejecutivo y la defensa oral presentan ambas opciones. Si el costo de una accion de retencion es bajo, se recomienda 0.35 (cobertura total). Si hay restriccion presupuestaria o de capacidad operativa, se recomienda 0.465 (F2-optimo). La tabla completa de tradeoffs queda en el notebook (seccion 8).
+
+## Decision 28 - Reemplazar KNNImputer por SimpleImputer con mediana en el pipeline de modelado
+
+**Fecha:** 2026-06-08
+
+**Que decidimos:** usar `SimpleImputer(strategy="median")` en lugar del `KNNImputer` planteado en Decision 3 para la imputacion de faltantes dentro del pipeline de modelado.
+
+**Por que:** Decision 3 propuso KNN porque permite imputar usando clientes similares. Al implementar el pipeline en `src/features/pipeline.py`, KNN presento dos problemas: (1) es significativamente mas lento en CV con grillas de hiperparametros de 160 y 48 combinaciones porque recalcula distancias en cada fold; (2) el `KNNImputer` de scikit-learn no admite columnas categoricas directamente, lo que complica el `ColumnTransformer`. La mediana es suficiente porque solo el 4-5% de los registros tienen faltantes en cada columna y el modelo final (Random Forest) es robusto a pequenas diferencias en la imputacion. El impacto en ROC-AUC de usar mediana vs KNN es negligible con este nivel de missingness.
+
+**Alternativas descartadas:** KNNImputer con pipeline separado para numericas y categoricas (mas complejo, mas lento, sin ganancia medible en este dataset).
+
+**Consecuencias:** Decision 3 queda superada por esta decision para la etapa de modelado. La imputacion KNN del notebook de limpieza (`notebooks/1. Limpieza de datos.ipynb`) se mantiene para el EDA, ya que ahi no hay restriccion de velocidad ni riesgo de leakage.
