@@ -351,3 +351,15 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** usar solo las variables continuas originales; codificar segmentos como variables ordinales (bajo/medio/alto con 3 niveles); usar Q33/Q67 como umbrales de frecuencia (descartado porque `OrderCount` se concentra fuertemente en 1-2-3, lo que hace que Q33 = Q67 = 2.0 y genera solapamiento: el 68% de los clientes quedaria marcado como low freq Y high freq al mismo tiempo). Q25=1.0 y Q75=3.0 separan tres segmentos limpios sin solapamiento: bajo (<=1, 31%), medio (2, 37%), alto (>=3, 31%).
 
 **Consecuencias:** `NUMERIC_FEATURES` pasa de 16 a 21 columnas y el output del pipeline de 33 a 38 columnas. Los umbrales fijos (Tenure) son reglas de negocio interpretables en la defensa oral. Los umbrales estadisticos (OrderCount, CashbackAmount) se fitean solo en train para evitar leakage. Hay que re-correr el notebook 3 (Training) para regenerar los parquets y el notebook 4 (Modeler) para reentrenar con las nuevas features.
+
+## Decision 30 - Regularizar el Random Forest final del Modeler
+
+**Fecha:** 2026-06-12
+
+**Que decidimos:** reemplazar el Random Forest optimizado con arboles libres por un Random Forest regularizado en `notebooks/4. Modeler.ipynb`. La nueva grilla usa `n_estimators=200`, `max_depth=[6, 8, 10, 12]`, `min_samples_leaf=[5, 10, 20]`, `min_samples_split=[10, 20, 40]`, `max_features='sqrt'`, `class_weight=['balanced', 'balanced_subsample']` y `max_samples=[0.70, 0.85]` con `bootstrap=True` y `return_train_score=True`.
+
+**Por que:** la configuracion anterior permitia `max_depth=None` y `min_samples_leaf=1`, una combinacion demasiado flexible para un modelo de arboles y con riesgo de memorizar train. La nueva grilla fuerza regularizacion estructural, mantiene diversidad entre arboles y permite medir explicitamente el gap train-CV. En la corrida registrada, el mejor RF regularizado fue `class_weight='balanced'`, `max_depth=12`, `max_samples=0.85`, `min_samples_leaf=5`, `min_samples_split=10`, con ROC-AUC train CV interno 0.9922, ROC-AUC validacion CV 0.9524 y gap ROC-AUC 0.0398.
+
+**Alternativas descartadas:** mantener el RF anterior con `max_depth=None` y hojas puras; elegir el Decision Tree optimizado como modelo final solo por interpretabilidad; eliminar RF para evitar complejidad. El DT optimizado queda como comparador interpretable, pero el RF regularizado sigue superandolo en test segun la corrida registrada: ROC-AUC 0.9690 y recall 0.8368 frente a ROC-AUC 0.9415 y recall 0.7789 del DT.
+
+**Consecuencias:** el notebook ahora reporta comparacion CV entre `DT baseline`, `DT optimizado` y `RF regularizado`, agrega chequeo de overfitting train vs CV para RF, actualiza la narrativa de SHAP y evalua en test set el RF regularizado. Hay que re-ejecutar `notebooks/4. Modeler.ipynb` para regenerar los outputs y graficos de `outputs/models`.
