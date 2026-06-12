@@ -327,6 +327,18 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Consecuencias:** el reporte ejecutivo y la defensa oral presentan ambas opciones. Si el costo de una accion de retencion es bajo, se recomienda 0.35 (cobertura total). Si hay restriccion presupuestaria o de capacidad operativa, se recomienda 0.465 (F2-optimo). La tabla completa de tradeoffs queda en el notebook (seccion 8).
 
+## Decision 29 - Agregar features binarias de segmentacion de clientes
+
+**Fecha:** 2026-06-12
+
+**Que decidimos:** incorporar en `src/features/pipeline.py` cinco flags binarias de segmentacion via `SegmentFeatureBuilder`: `is_new_customer` (Tenure <= 3 meses), `is_loyal_customer` (Tenure >= 18 meses), `is_low_freq_user` (OrderCount <= Q33 train), `is_high_freq_user` (OrderCount >= Q67 train), `is_high_value` (CashbackAmount >= mediana train).
+
+**Por que:** las variables originales ya estan en el modelo, pero sus valores continuos pueden capturar mal los umbrales de negocio mas relevantes. Un cliente con Tenure=4 y otro con Tenure=20 son cualitativamente distintos aunque la variable continua los trate como proximos. Las flags permiten al modelo aprender directamente sobre estos segmentos sin depender de que el arbol encuentre el corte exacto.
+
+**Alternativas descartadas:** usar solo las variables continuas originales; codificar segmentos como variables ordinales (bajo/medio/alto con 3 niveles).
+
+**Consecuencias:** `NUMERIC_FEATURES` pasa de 16 a 21 columnas y el output del pipeline de 33 a 38 columnas. Los umbrales fijos (Tenure) son reglas de negocio interpretables en la defensa oral. Los umbrales estadisticos (OrderCount, CashbackAmount) se fitean solo en train para evitar leakage. Hay que re-correr el notebook 3 (Training) para regenerar los parquets y el notebook 4 (Modeler) para reentrenar con las nuevas features.
+
 ## Decision 28 - Reemplazar KNNImputer por SimpleImputer con mediana en el pipeline de modelado
 
 **Fecha:** 2026-06-08

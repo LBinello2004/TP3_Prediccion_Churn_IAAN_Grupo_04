@@ -51,7 +51,51 @@ DERIVED_NUMERIC_FEATURES = [
     "complain_x_satisfaction",
 ]
 
-NUMERIC_FEATURES = BASE_NUMERIC_FEATURES + DERIVED_NUMERIC_FEATURES
+BINARY_SEGMENT_FEATURES = [
+    "is_new_customer",
+    "is_loyal_customer",
+    "is_low_freq_user",
+    "is_high_freq_user",
+    "is_high_value",
+]
+
+NUMERIC_FEATURES = BASE_NUMERIC_FEATURES + DERIVED_NUMERIC_FEATURES + BINARY_SEGMENT_FEATURES
+
+
+class SegmentFeatureBuilder(BaseEstimator, TransformerMixin):
+    """Binary segment flags fitted on train only.
+
+    Fixed-threshold flags (Tenure cutoffs) encode business rules.
+    Statistical-threshold flags (OrderCount, CashbackAmount) learn
+    their cutoffs from train to avoid leakage.
+    """
+
+    TENURE_NEW = 3     # months: new customer window
+    TENURE_LOYAL = 18  # months: established / senior customer
+
+    def fit(self, X: pd.DataFrame, y: Iterable | None = None) -> "SegmentFeatureBuilder":
+        self.tenure_median_ = float(X["Tenure"].median())
+        self.cashback_median_ = float(X["CashbackAmount"].median())
+        # Q25/Q75 instead of Q33/Q67: OrderCount clusters heavily at 1-2-3,
+        # so tertiles collapse to the same value and produce overlapping flags.
+        order_quantiles = X["OrderCount"].quantile([0.25, 0.75])
+        self.order_count_q25_ = float(order_quantiles.iloc[0])
+        self.order_count_q75_ = float(order_quantiles.iloc[1])
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        X_out = X.copy()
+        tenure = X_out["Tenure"].fillna(self.tenure_median_)
+        order_count = X_out["OrderCount"].fillna(self.order_count_q25_)
+        cashback = X_out["CashbackAmount"].fillna(self.cashback_median_)
+
+        X_out["is_new_customer"] = (tenure <= self.TENURE_NEW).astype(int)
+        X_out["is_loyal_customer"] = (tenure >= self.TENURE_LOYAL).astype(int)
+        X_out["is_low_freq_user"] = (order_count <= self.order_count_q25_).astype(int)
+        X_out["is_high_freq_user"] = (order_count >= self.order_count_q75_).astype(int)
+        X_out["is_high_value"] = (cashback >= self.cashback_median_).astype(int)
+        return X_out
+
 
 class BusinessFeatureBuilder(BaseEstimator, TransformerMixin):
     """Create deterministic business features before sklearn preprocessing."""
@@ -109,6 +153,7 @@ def build_pipeline() -> Pipeline:
 
     return Pipeline(
         steps=[
+            ("segment_features", SegmentFeatureBuilder()),
             ("business_features", BusinessFeatureBuilder()),
             ("preprocessor", preprocessor),
         ]
