@@ -331,11 +331,11 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** incorporar en `src/features/pipeline.py` cinco flags binarias de segmentacion via `SegmentFeatureBuilder`: `is_new_customer` (Tenure <= 3 meses), `is_loyal_customer` (Tenure >= 18 meses), `is_low_freq_user` (OrderCount <= Q33 train), `is_high_freq_user` (OrderCount >= Q67 train), `is_high_value` (CashbackAmount >= mediana train).
+**Que decidimos:** incorporar en `src/features/pipeline.py` cinco flags binarias de segmentacion via `SegmentFeatureBuilder`: `is_new_customer` (Tenure <= 3 meses), `is_loyal_customer` (Tenure >= 18 meses), `is_low_freq_user` (OrderCount <= Q25 train), `is_high_freq_user` (OrderCount >= Q75 train), `is_high_value` (CashbackAmount >= mediana train).
 
 **Por que:** las variables originales ya estan en el modelo, pero sus valores continuos pueden capturar mal los umbrales de negocio mas relevantes. Un cliente con Tenure=4 y otro con Tenure=20 son cualitativamente distintos aunque la variable continua los trate como proximos. Las flags permiten al modelo aprender directamente sobre estos segmentos sin depender de que el arbol encuentre el corte exacto.
 
-**Alternativas descartadas:** usar solo las variables continuas originales; codificar segmentos como variables ordinales (bajo/medio/alto con 3 niveles).
+**Alternativas descartadas:** usar solo las variables continuas originales; codificar segmentos como variables ordinales (bajo/medio/alto con 3 niveles); usar Q33/Q67 como umbrales de frecuencia (descartado porque `OrderCount` se concentra fuertemente en 1-2-3, lo que hace que Q33 = Q67 = 2.0 y genera solapamiento: el 68% de los clientes quedaria marcado como low freq Y high freq al mismo tiempo). Q25=1.0 y Q75=3.0 separan tres segmentos limpios sin solapamiento: bajo (<=1, 31%), medio (2, 37%), alto (>=3, 31%).
 
 **Consecuencias:** `NUMERIC_FEATURES` pasa de 16 a 21 columnas y el output del pipeline de 33 a 38 columnas. Los umbrales fijos (Tenure) son reglas de negocio interpretables en la defensa oral. Los umbrales estadisticos (OrderCount, CashbackAmount) se fitean solo en train para evitar leakage. Hay que re-correr el notebook 3 (Training) para regenerar los parquets y el notebook 4 (Modeler) para reentrenar con las nuevas features.
 
