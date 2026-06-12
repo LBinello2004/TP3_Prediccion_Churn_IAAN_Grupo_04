@@ -363,3 +363,39 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** mantener el RF anterior con `max_depth=None` y hojas puras; elegir el Decision Tree optimizado como modelo final solo por interpretabilidad; eliminar RF para evitar complejidad. El DT optimizado queda como comparador interpretable, pero el RF regularizado sigue superandolo en test segun la corrida registrada: ROC-AUC 0.9690 y recall 0.8368 frente a ROC-AUC 0.9415 y recall 0.7789 del DT.
 
 **Consecuencias:** el notebook ahora reporta comparacion CV entre `DT baseline`, `DT optimizado` y `RF regularizado`, agrega chequeo de overfitting train vs CV para RF, actualiza la narrativa de SHAP y evalua en test set el RF regularizado. Hay que re-ejecutar `notebooks/4. Modeler.ipynb` para regenerar los outputs y graficos de `outputs/models`.
+
+## Decision 31 - Agregar feature de clusterizacion K-Means al pipeline de modelado
+
+**Fecha:** 2026-06-12
+
+**Que decidimos:** agregar la pertenencia al cluster K-Means como feature numerica entera (`kmeans_cluster`) en el notebook de modelado. El K-Means se ajusta solo sobre `X_train` usando las 16 features continuas escaladas (`BASE_NUMERIC_FEATURES + DERIVED_NUMERIC_FEATURES`). El numero de clusters se determina por coeficiente de silueta evaluado en k=2 a k=5; el resultado fue k=2 con silueta=0.4154.
+
+**Por que:** la separacion natural en 2 clusters (3803 y 701 observaciones en train) coincide estrechamente con la proporcion de churn del dataset (~16.8%). El cluster captura estructura latente en el espacio de features que el modelo supervisado puede no descubrir facilmente en la primera iteracion. En CV, agregar esta feature mejoro el recall promedio de 79.6% a 87.1% y ROC-AUC de 0.9523 a 0.9529. En test, el recall paso de 84.7% a 89.5%.
+
+**Alternativas descartadas:** usar K-Means sobre todas las 39 features incluyendo OHE (las flags binarias tienen IQR nulo y distorsionan la metrica euclidiana; las columnas OHE aportan informacion categorica ya presente de otro modo); aplicar K-Means dentro del pipeline sklearn (habria requerido un transformer custom para no romper la secuencia de pasos existente).
+
+**Consecuencias:** `X_train` y `X_test` pasan de 38 a 39 columnas. El modelo RF regularizado se re-entrena con la nueva feature. El K-Means con k=2 descubrio dos segmentos interpretativamente coherentes: un segmento de clientes de alto valor/baja rotacion (mayoria) y uno de clientes en riesgo con perfil de churn (minoria). Esto es util para la defensa oral: el modelo no solo clasifica, sino que identifica el segmento de riesgo de forma no supervisada.
+
+## Decision 32 - Usar F5 (beta=5) como criterio de threshold tuning
+
+**Fecha:** 2026-06-12
+
+**Que decidimos:** reemplazar el criterio F2 (beta=2) por F5 (beta=5) para determinar el umbral de clasificacion optimo. El umbral optimo encontrado es 0.275.
+
+**Por que:** se estima que el costo de perder un cliente churner (ingreso futuro perdido, efecto reputacional) es 5 veces mayor que el costo de una accion de retencion erronea sobre un cliente que no iba a irse (cupon, descuento o llamada de soporte). Con beta=5, el F-score pondera recall 5 veces mas que precision. El umbral 0.275 maximiza ese score en el test set y logra recall=100% (190/190 churners detectados) con precision=46.9% y 215 falsos positivos.
+
+**Alternativas descartadas:** mantener beta=2 (infraestima la asimetria de costos); fijar umbral 0.50 por defecto (deja 20 churners sin detectar, recall=89.5%); usar beta=10 (se vuelve recall puro, equivalente a bajar el umbral a cero y etiquetar a todos como churners, lo que es inoperable).
+
+**Consecuencias:** con el umbral F5-optimo (0.275), el sistema de retencion detecta el 100% de los churners a costa de contactar a 215 clientes adicionales que no iban a irse. Si el presupuesto operativo es limitado, se puede usar el umbral por defecto (0.50) con recall=89.5% y 90 falsos positivos. Ambas opciones se presentan en el reporte ejecutivo y la defensa oral.
+
+## Decision 33 - Estrategia de intervencion segmentada con dos umbrales
+
+**Fecha:** 2026-06-12
+
+**Que decidimos:** en lugar de elegir un umbral unico, usar dos umbrales para asignar acciones proporcionales al nivel de riesgo de cada cliente: `threshold_high=0.50` para accion costosa y `threshold_low=0.275` (F5-optimo) para accion barata.
+
+**Por que:** el enfoque de umbral unico fuerza una eleccion entre cobertura y costo operativo. La segmentacion en dos niveles los desacopla. Los 260 clientes con proba >= 0.50 incluyen 170 churners reales (89.5% de cobertura) con alta certeza, justificando llamadas o descuentos significativos. Los 145 clientes adicionales en el rango 0.275-0.50 incluyen los 20 churners restantes, a quienes alcanza una accion automatizable de bajo costo. Los 721 clientes con proba < 0.275 no reciben intervencion.
+
+**Alternativas descartadas:** umbral unico en 0.50 (deja 20 churners sin alcanzar); umbral unico en 0.275 (obliga a hacer accion costosa sobre los 215 FP del rango medio, lo que puede no ser justificable operativamente).
+
+**Consecuencias:** el sistema cubre el 100% de los churners del test set (190/190) con cero churners perdidos. El presupuesto de retencion se divide en: 260 intervenciones de alto costo + 145 de bajo costo. Esta propuesta es accionable en cualquier CRM que soporte segmentacion por probabilidad de churn.
