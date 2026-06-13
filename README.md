@@ -16,7 +16,7 @@ El objetivo es predecir que clientes de un e-commerce tienen mayor probabilidad 
 ```
 data/
   raw/           # Dataset original sin modificar
-  processed/     # Dataset limpio con imputacion KNN
+  processed/     # Dataset limpio con imputacion por mediana
     split/       # CSVs de train/test, X/y, indices y resumen del holdout
     features_train.parquet  # Features transformadas para modelado
     features_test.parquet   # Features transformadas para modelado

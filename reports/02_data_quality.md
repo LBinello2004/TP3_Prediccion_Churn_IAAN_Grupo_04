@@ -32,7 +32,7 @@
 
 No se usa `dropna()` como limpieza principal porque descarta casi un tercio de la base. Para una base de churn, esa perdida es demasiado alta: reduce informacion de clientes y puede debilitar el analisis de segmentos.
 
-La limpieza exploratoria usa imputacion KNN para variables numericas, con escalado previo. No se crean columnas adicionales de indicador de faltante para mantener el dataset procesado con la misma estructura conceptual que el raw.
+La limpieza exploratoria usa imputacion por mediana para variables numericas. No se crean columnas adicionales de indicador de faltante para mantener el dataset procesado con la misma estructura conceptual que el raw.
 
 Tambien se estandarizan categorias equivalentes antes de guardar `data/processed/datos_limpios.csv`: `COD` se unifica como `Cash on Delivery`, `CC` como `Credit Card`, `Phone` como `Mobile Phone`, y `Mobile` como `Mobile Phone` en `PreferedOrderCat`.
 
@@ -41,7 +41,7 @@ Tambien se estandarizan categorias equivalentes antes de guardar `data/processed
 - `Complain` debe tratarse como posible leakage hasta justificar temporalmente si la queja estaba disponible antes de la prediccion.
 - `CustomerID` es identificador y no debe usarse como predictor.
 - La imputacion para modelado no debe hacerse antes del split train/test. Debe ir dentro de un `Pipeline` para evitar leakage desde test hacia train.
-- `CouponUsed`, `OrderCount`, `Tenure`, `WarehouseToHome`, `HourSpendOnApp`, `OrderAmountHikeFromlastYear` y `DaySinceLastOrder` son numericas, pero varias representan conteos o cantidades enteras; despues de KNN se redondean y se acotan a valores no negativos.
+- `CouponUsed`, `OrderCount`, `Tenure`, `WarehouseToHome`, `HourSpendOnApp`, `OrderAmountHikeFromlastYear` y `DaySinceLastOrder` son numericas, pero varias representan conteos o cantidades enteras; despues de imputar se redondean y se acotan a valores no negativos.
 - Las categorias equivalentes de medio de pago, dispositivo de login y categoria de orden ya quedan normalizadas en `datos_limpios.csv`, por lo que el EDA no debe contar `COD`/`Cash on Delivery`, `CC`/`Credit Card`, `Phone`/`Mobile Phone` o `Mobile`/`Mobile Phone` como categorias separadas.
 
 ## Cierre ds-dq

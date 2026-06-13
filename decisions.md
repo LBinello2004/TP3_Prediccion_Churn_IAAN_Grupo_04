@@ -26,25 +26,25 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Consecuencias:** conservamos la base completa de 5630 clientes y tratamos los faltantes con imputacion.
 
-## Decision 3 - Imputar faltantes numericos con KNN
+## Decision 3 - Imputar faltantes numericos con mediana
 
 **Fecha:** 2026-05-30
 
-**Que decidimos:** imputar las variables numericas con faltantes usando `KNNImputer`.
+**Que decidimos:** imputar las variables numericas con faltantes usando mediana.
 
-**Por que:** todos los faltantes detectados estan en variables numericas (`Tenure`, `WarehouseToHome`, `HourSpendOnApp`, `OrderAmountHikeFromlastYear`, `CouponUsed`, `OrderCount`, `DaySinceLastOrder`). KNN permite completar valores usando clientes similares en lugar de una regla unica como media o mediana.
+**Por que:** todos los faltantes detectados estan en variables numericas (`Tenure`, `WarehouseToHome`, `HourSpendOnApp`, `OrderAmountHikeFromlastYear`, `CouponUsed`, `OrderCount`, `DaySinceLastOrder`) y cada columna tiene solo 4-5% de nulos. La mediana es robusta a outliers, simple de explicar y consistente con el pipeline de modelado.
 
-**Alternativas descartadas:** imputar todo con mediana o media; eliminar filas con nulos.
+**Alternativas descartadas:** `KNNImputer` (mas complejo, requiere escalado y genera una politica distinta entre limpieza y modelado); imputar con media; eliminar filas con nulos.
 
-**Consecuencias:** antes de KNN escalamos variables numericas con `StandardScaler`, porque KNN depende de distancias. Luego revertimos el escalado.
+**Consecuencias:** conservamos la base completa de 5630 clientes y usamos la misma politica conceptual de imputacion en limpieza exploratoria y modelado.
 
-## Decision 4 - Redondear variables de conteo despues de KNN
+## Decision 4 - Redondear variables de conteo despues de imputar
 
 **Fecha:** 2026-05-30
 
 **Que decidimos:** redondear variables que representan conteos o cantidades enteras despues de imputar.
 
-**Por que:** KNN puede devolver decimales, pero variables como `OrderCount`, `CouponUsed`, `Tenure` o `DaySinceLastOrder` deben seguir siendo interpretables como cantidades enteras.
+**Por que:** la mediana puede devolver decimales cuando la cantidad de observaciones es par, pero variables como `OrderCount`, `CouponUsed`, `Tenure` o `DaySinceLastOrder` deben seguir siendo interpretables como cantidades enteras.
 
 **Alternativas descartadas:** dejar decimales generados por la imputacion en variables de conteo.
 
@@ -328,17 +328,17 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Consecuencias:** el reporte ejecutivo y la defensa oral presentan ambas opciones. Si el costo de una accion de retencion es bajo, se recomienda 0.35 (cobertura total). Si hay restriccion presupuestaria o de capacidad operativa, se recomienda 0.465 (F2-optimo). La tabla completa de tradeoffs queda en el notebook (seccion 8).
 
 
-## Decision 28 - Reemplazar KNNImputer por SimpleImputer con mediana en el pipeline de modelado
+## Decision 28 - Mantener SimpleImputer con mediana en el pipeline de modelado
 
 **Fecha:** 2026-06-08
 
-**Que decidimos:** usar `SimpleImputer(strategy="median")` en lugar del `KNNImputer` planteado en Decision 3 para la imputacion de faltantes dentro del pipeline de modelado.
+**Que decidimos:** usar `SimpleImputer(strategy="median")` para la imputacion de faltantes dentro del pipeline de modelado.
 
-**Por que:** Decision 3 propuso KNN porque permite imputar usando clientes similares. Al implementar el pipeline en `src/features/pipeline.py`, KNN presento dos problemas: (1) es significativamente mas lento en CV con grillas de hiperparametros de 160 y 48 combinaciones porque recalcula distancias en cada fold; (2) el `KNNImputer` de scikit-learn no admite columnas categoricas directamente, lo que complica el `ColumnTransformer`. La mediana es suficiente porque solo el 4-5% de los registros tienen faltantes en cada columna y el modelo final (Random Forest) es robusto a pequenas diferencias en la imputacion. El impacto en ROC-AUC de usar mediana vs KNN es negligible con este nivel de missingness.
+**Por que:** alinea modelado con la limpieza definida en Decision 3 y evita usar criterios distintos entre EDA y entrenamiento. La mediana es suficiente porque solo el 4-5% de los registros tienen faltantes en cada columna y el modelo final (Random Forest) es robusto a pequenas diferencias en la imputacion.
 
-**Alternativas descartadas:** KNNImputer con pipeline separado para numericas y categoricas (mas complejo, mas lento, sin ganancia medible en este dataset).
+**Alternativas descartadas:** `KNNImputer` con pipeline separado para numericas y categoricas (mas complejo, mas lento y sin ganancia defendible en este dataset).
 
-**Consecuencias:** Decision 3 queda superada por esta decision para la etapa de modelado. La imputacion KNN del notebook de limpieza (`notebooks/1. Limpieza de datos.ipynb`) se mantiene para el EDA, ya que ahi no hay restriccion de velocidad ni riesgo de leakage.
+**Consecuencias:** limpieza exploratoria y modelado quedan alineados: mediana en `notebooks/1. Limpieza de datos.ipynb` y mediana dentro del pipeline de entrenamiento/CV.
 
 ## Decision 29 - Agregar features binarias de segmentacion de clientes
 
@@ -447,3 +447,15 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** mantener small multiples de barras (poca sintesis ejecutiva); usar solo una tabla de promedios (menos visual); normalizar sin mostrar valores reales (pierde interpretabilidad de negocio).
 
 **Consecuencias:** `outputs/business/perfil_segmentos.png` ahora comunica el perfil relativo de cada segmento de forma mas accionable para la presentacion.
+
+## Decision 38 - Unificar imputacion en mediana y descartar KNN
+
+**Fecha:** 2026-06-13
+
+**Que decidimos:** no usar KNN para imputacion en ninguna etapa del proyecto. La limpieza exploratoria y el pipeline de modelado usan imputacion por mediana.
+
+**Por que:** no tiene sentido defender dos criterios distintos para resolver el mismo problema de faltantes. Con 4-5% de nulos por columna, la mediana es suficiente, robusta, reproducible y mucho mas facil de explicar en una presentacion de negocio.
+
+**Alternativas descartadas:** mantener KNN en el notebook de limpieza y mediana en modelado; usar media; eliminar filas con nulos.
+
+**Consecuencias:** `notebooks/1. Limpieza de datos.ipynb`, `data/processed/datos_limpios.csv`, `reports/02_data_quality.md` y la narrativa de la presentacion quedan consistentes: no se usa KNN para imputar.
