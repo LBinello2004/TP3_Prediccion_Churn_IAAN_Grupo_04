@@ -376,26 +376,74 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Consecuencias:** `X_train` y `X_test` pasan de 38 a 39 columnas. El modelo RF regularizado se re-entrena con la nueva feature. El K-Means con k=2 descubrio dos segmentos interpretativamente coherentes: un segmento de clientes de alto valor/baja rotacion (mayoria) y uno de clientes en riesgo con perfil de churn (minoria). Esto es util para la defensa oral: el modelo no solo clasifica, sino que identifica el segmento de riesgo de forma no supervisada.
 
-## Decision 32 - Usar F5 (beta=5) como criterio de threshold tuning
+## Decision 32 - Usar F2 (beta=2) como criterio de threshold tuning
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** reemplazar el criterio F2 (beta=2) por F5 (beta=5) para determinar el umbral de clasificacion optimo. El umbral optimo encontrado es 0.275.
+**Que decidimos:** usar F2 (beta=2) para determinar el umbral de clasificacion optimo. El umbral optimo encontrado es 0.380.
 
-**Por que:** se estima que el costo de perder un cliente churner (ingreso futuro perdido, efecto reputacional) es 5 veces mayor que el costo de una accion de retencion erronea sobre un cliente que no iba a irse (cupon, descuento o llamada de soporte). Con beta=5, el F-score pondera recall 5 veces mas que precision. El umbral 0.275 maximiza ese score en el test set y logra recall=100% (190/190 churners detectados) con precision=46.9% y 215 falsos positivos.
+**Por que:** para la estrategia de intervencion final se prioriza recall sobre precision: perder un cliente churner sin intervenir es mas grave que contactar de mas con una accion de bajo costo. Con beta=2, el F-score pondera recall mas que precision. El umbral 0.380 maximiza ese score en el test set y logra recall=93.2% con precision=61.5%, detectando 177 de 190 churners.
 
-**Alternativas descartadas:** mantener beta=2 (infraestima la asimetria de costos); fijar umbral 0.50 por defecto (deja 20 churners sin detectar, recall=89.5%); usar beta=10 (se vuelve recall puro, equivalente a bajar el umbral a cero y etiquetar a todos como churners, lo que es inoperable).
+**Alternativas descartadas:** usar un criterio orientado a precision (deja demasiados churners sin cubrir); fijar umbral 0.50 por defecto como unico criterio (mejora precision, pero pierde cobertura); usar un umbral muy bajo orientado a recall puro (vuelve la campana poco eficiente operativamente).
 
-**Consecuencias:** con el umbral F5-optimo (0.275), el sistema de retencion detecta el 100% de los churners a costa de contactar a 215 clientes adicionales que no iban a irse. Si el presupuesto operativo es limitado, se puede usar el umbral por defecto (0.50) con recall=89.5% y 90 falsos positivos. Ambas opciones se presentan en el reporte ejecutivo y la defensa oral.
+**Consecuencias:** con el umbral F2-optimo (0.380), el sistema amplía la cobertura y deja solo 13 churners sin intervención. La precision baja frente a un criterio mas estricto, por lo que la estrategia segmentada reserva la accion costosa para `proba >= 0.50` y usa acciones baratas para el rango 0.380-0.50.
 
 ## Decision 33 - Estrategia de intervencion segmentada con dos umbrales
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** en lugar de elegir un umbral unico, usar dos umbrales para asignar acciones proporcionales al nivel de riesgo de cada cliente: `threshold_high=0.50` para accion costosa y `threshold_low=0.275` (F5-optimo) para accion barata.
+**Que decidimos:** en lugar de elegir un umbral unico, usar dos umbrales para asignar acciones proporcionales al nivel de riesgo de cada cliente: `threshold_high=0.50` para accion costosa y `threshold_low=0.380` (F2-optimo) para accion barata.
 
-**Por que:** el enfoque de umbral unico fuerza una eleccion entre cobertura y costo operativo. La segmentacion en dos niveles los desacopla. Los 260 clientes con proba >= 0.50 incluyen 170 churners reales (89.5% de cobertura) con alta certeza, justificando llamadas o descuentos significativos. Los 145 clientes adicionales en el rango 0.275-0.50 incluyen los 20 churners restantes, a quienes alcanza una accion automatizable de bajo costo. Los 721 clientes con proba < 0.275 no reciben intervencion.
+**Por que:** el enfoque de umbral unico fuerza una eleccion entre cobertura y costo operativo. La segmentacion en dos niveles los desacopla. Los 225 clientes con proba >= 0.50 incluyen 161 churners reales y justifican llamadas o descuentos significativos. Los 63 clientes adicionales en el rango 0.380-0.50 incluyen 16 churners reales, por lo que conviene tratarlos con una accion automatizable de bajo costo. Los 838 clientes con proba < 0.380 no reciben intervencion.
 
-**Alternativas descartadas:** umbral unico en 0.50 (deja 20 churners sin alcanzar); umbral unico en 0.275 (obliga a hacer accion costosa sobre los 215 FP del rango medio, lo que puede no ser justificable operativamente).
+**Alternativas descartadas:** umbral unico en 0.50 (deja 16 churners adicionales sin alcanzar); umbral unico en 0.380 (obliga a hacer accion costosa sobre todos los casos positivos, incluyendo 111 falsos positivos).
 
-**Consecuencias:** el sistema cubre el 100% de los churners del test set (190/190) con cero churners perdidos. El presupuesto de retencion se divide en: 260 intervenciones de alto costo + 145 de bajo costo. Esta propuesta es accionable en cualquier CRM que soporte segmentacion por probabilidad de churn.
+**Consecuencias:** el sistema cubre el 93.2% de los churners del test set (177/190). El presupuesto de retencion se divide en: 225 intervenciones de alto costo + 63 de bajo costo. Esta propuesta es accionable en cualquier CRM que soporte segmentacion por probabilidad de churn.
+
+## Decision 34 - Crear notebook de graficos de negocio
+
+**Fecha:** 2026-06-13
+
+**Que decidimos:** crear `notebooks/5. Gráficos de negocio.ipynb` como notebook independiente para traducir el modelo de churn a visualizaciones accionables para negocio. El notebook carga el modelo final `outputs/models/best_rf.pkl`, reconstruye la feature `kmeans_cluster`, calcula el umbral F2 optimo (`beta=2`) y arma los segmentos de intervencion.
+
+**Por que:** el notebook de modelado contiene la evaluacion tecnica, pero para presentar el caso de negocio conviene separar graficos de decision: tamanio de segmentos, churners capturados, trade-off precision/recall, perfil promedio de clientes por segmento y lista priorizada para CRM.
+
+**Alternativas descartadas:** agregar mas graficos al notebook 4 (mezcla modelado con storytelling de negocio); crear solo imagenes estaticas sin notebook reproducible (pierde trazabilidad); usar el umbral 0.50 como unico criterio (no refleja la decision de priorizar recall con F2).
+
+**Consecuencias:** el proyecto gana un artefacto especifico para comunicacion ejecutiva. Al ejecutar el notebook se generan graficos en `outputs/business` y un CSV `clientes_priorizados_retencion.csv` con clientes ordenados por probabilidad de churn y segmento de intervencion.
+
+## Decision 35 - Agregar graficos de variables binarias del pipeline
+
+**Fecha:** 2026-06-13
+
+**Que decidimos:** extender `notebooks/5. Graficos de negocio.ipynb` con una seccion especifica para las flags binarias generadas en `src/features/pipeline.py`: `is_new_customer`, `is_loyal_customer`, `is_low_freq_user`, `is_high_freq_user` e `is_high_value`.
+
+**Por que:** estas variables son interpretables para negocio y ayudan a defender que el modelo no es solo una caja negra: captura segmentos accionables como clientes nuevos, clientes leales, baja/alta frecuencia y alto valor. Visualizarlas permite mostrar tasa de churn, probabilidad promedio e intensidad de intervencion por segmento binario.
+
+**Alternativas descartadas:** dejar las flags solo como features internas del modelo (pierde valor explicativo); graficar solo variables continuas originales (menos accionable para CRM); mezclar estas flags dentro del perfil promedio general (oculta el contraste flag activa vs no activa).
+
+**Consecuencias:** el notebook 5 ahora genera dos graficos adicionales en `outputs/business`: `flags_binarias_tasa_churn.png` y `flags_binarias_segmentos_intervencion.png`. La seccion tambien muestra una tabla resumen con clientes, churners, tasa de churn, probabilidad media y porcentaje intervenido para cada flag activa/inactiva.
+
+## Decision 36 - Agregar grafico porcentual de prioridades de intervencion
+
+**Fecha:** 2026-06-13
+
+**Que decidimos:** agregar debajo del grafico de segmentos de intervencion un grafico de barra horizontal apilada al 100% con la proporcion de clientes en `Alta prioridad`, `Media prioridad` y `Sin accion`.
+
+**Por que:** el grafico de cantidades absolutas muestra volumen y churners reales, pero para una presentacion ejecutiva tambien conviene mostrar rapidamente que porcentaje de la base cae en cada nivel de accion. Esto ayuda a dimensionar capacidad operativa y presupuesto.
+
+**Alternativas descartadas:** usar otro grafico vertical de barras (duplica el anterior); mostrar solo una tabla porcentual (menos visual); mezclar porcentajes dentro del grafico de cantidades absolutas (sobrecarga la lectura).
+
+**Consecuencias:** `notebooks/5. Graficos de negocio.ipynb` ahora genera `outputs/business/proporcion_prioridades_intervencion.png`, con porcentajes y cantidades por nivel de intervencion.
+
+## Decision 37 - Reemplazar perfil promedio por heatmap relativo de segmentos
+
+**Fecha:** 2026-06-13
+
+**Que decidimos:** reemplazar el grafico de barras facetadas de perfil promedio por segmento por un heatmap relativo. El nuevo grafico muestra, para cada segmento de intervencion, la diferencia porcentual de cada variable respecto del promedio general, y entre parentesis conserva el valor promedio real.
+
+**Por que:** el grafico anterior mostraba seis barras separadas y obligaba a comparar a ojo, sin dejar claro que caracterizaba a cada segmento. El heatmap permite ver rapidamente que la alta prioridad concentra clientes con menor antiguedad, mas reclamos y menos pedidos/dias desde ultimo pedido, mientras que el segmento sin accion tiene mayor antiguedad y menos reclamos.
+
+**Alternativas descartadas:** mantener small multiples de barras (poca sintesis ejecutiva); usar solo una tabla de promedios (menos visual); normalizar sin mostrar valores reales (pierde interpretabilidad de negocio).
+
+**Consecuencias:** `outputs/business/perfil_segmentos.png` ahora comunica el perfil relativo de cada segmento de forma mas accionable para la presentacion.
