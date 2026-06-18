@@ -181,11 +181,14 @@ El pipeline produce 38 features. En el notebook de modelado se agrega `kmeans_cl
 Se comparan:
 
 - `DummyClassifier(strategy="most_frequent")` como baseline;
+- `DecisionTreeClassifier` regularizado como modelo interpretable obligatorio;
 - `RandomForestClassifier` como modelo principal.
 
 El DummyClassifier demuestra por qué accuracy no es suficiente: puede alcanzar aproximadamente 83% prediciendo siempre “No churn”, pero obtiene recall y F2 iguales a cero.
 
-El Random Forest se selecciona mediante `GridSearchCV` maximizando **PR-AUC**, métrica adecuada para evaluar el ranking de la clase minoritaria.
+El árbol y el Random Forest se seleccionan mediante `GridSearchCV` maximizando **PR-AUC**, métrica adecuada para evaluar el ranking de la clase minoritaria.
+
+En validación cruzada, el árbol obtiene PR-AUC 0,7249, ROC-AUC 0,8937, recall 0,8290 y precisión 0,5614. Random Forest alcanza PR-AUC 0,8122, ROC-AUC 0,9485, recall 0,7741 y precisión 0,6882. Aunque el árbol logra algo más de recall con el umbral estándar, Random Forest separa mejor el riesgo y genera alertas más precisas. Por eso el árbol se conserva como referencia interpretable y Random Forest se elige como modelo operativo, cuyo umbral se calibra posteriormente por F2.
 
 Configuración final:
 
@@ -375,6 +378,9 @@ Las versiones no están fijadas en `requirements.txt`. Para una reproducción es
 ### Modelo
 
 - `outputs/models/best_rf.pkl`: Random Forest final.
+- `outputs/models/best_decision_tree.pkl`: árbol de decisión regularizado.
+- `outputs/models/decision_tree_top3.png`: primeros tres niveles del árbol para interpretación.
+- `outputs/models/decision_tree_vs_random_forest_cv.png`: comparación de métricas en validación cruzada.
 - `outputs/models/threshold_f2_cv.json`: umbral F2 y métricas out-of-fold.
 - `outputs/models/confusion_matrix.png`: matriz de confusión final.
 - `outputs/models/roc_curve.png`: curva ROC.

@@ -471,3 +471,13 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** mantener los registros por tener IDs diferentes; eliminar automaticamente todos los pares sinteticamente relacionados aunque presenten diferencias en sus variables.
 
 **Consecuencias:** `data/processed/datos_limpios.csv` pasa de 5.630 a 5.074 filas y conserva 841 churners, con una tasa de churn de 16,57%. Se regeneran los artefactos de EDA, split, entrenamiento, modelado y negocio sobre esta version deduplicada.
+
+## Decision 40 - Incorporar un arbol de decision interpretable como modelo obligatorio
+
+**Que decidimos:** incorporar un `DecisionTreeClassifier` regularizado en `notebooks/4. Modeler.ipynb`, ajustado mediante `GridSearchCV` con validacion cruzada estratificada de 5 folds y seleccion por PR-AUC. El arbol se compara con el DummyClassifier y el Random Forest usando las mismas metricas. Tambien se genera una visualizacion de sus primeros tres niveles y se guarda el modelo entrenado.
+
+**Por que:** la consigna exige un arbol de decision y su estructura de reglas `si/no` es especialmente util para explicar el modelo en la defensa. Sin embargo, la seleccion del modelo operativo debe basarse en capacidad predictiva sobre datos no vistos y no solo en interpretabilidad.
+
+**Resultado:** el arbol regularizado obtuvo PR-AUC CV de 0.7249, ROC-AUC de 0.8937, recall de 0.8290, precision de 0.5614 y F2 de 0.7566. Random Forest obtuvo PR-AUC CV de 0.8122, ROC-AUC de 0.9485, recall de 0.7741, precision de 0.6882 y F2 de 0.7549 con umbral 0.50.
+
+**Consecuencias:** el arbol queda como modelo interpretable de referencia. Random Forest se mantiene como modelo final porque presenta una capacidad de ranking claramente superior y mayor precision; luego se calibra su umbral por F2 para priorizar recall, alcanzando en test recall de 0.9643 y F2 de 0.8165. Los artefactos generados son `outputs/models/decision_tree_top3.png`, `outputs/models/decision_tree_vs_random_forest_cv.png` y `outputs/models/best_decision_tree.pkl`.
