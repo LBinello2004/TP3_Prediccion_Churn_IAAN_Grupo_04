@@ -24,7 +24,7 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Alternativas descartadas:** borrar todas las filas incompletas.
 
-**Consecuencias:** conservamos la base completa de 5630 clientes y tratamos los faltantes con imputacion.
+**Consecuencias:** no se eliminan filas por valores faltantes; se conservan todos los perfiles no duplicados y los faltantes se tratan con imputacion.
 
 ## Decision 3 - Imputar faltantes numericos con mediana
 
@@ -36,7 +36,7 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Alternativas descartadas:** `KNNImputer` (mas complejo, requiere escalado y genera una politica distinta entre limpieza y modelado); imputar con media; eliminar filas con nulos.
 
-**Consecuencias:** conservamos la base completa de 5630 clientes y usamos la misma politica conceptual de imputacion en limpieza exploratoria y modelado.
+**Consecuencias:** se conservan todos los perfiles no duplicados y se usa la misma politica conceptual de imputacion en limpieza exploratoria y modelado.
 
 ## Decision 4 - Redondear variables de conteo despues de imputar
 
@@ -116,7 +116,7 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Que decidimos:** ejecutar el EDA inicial sobre `data/processed/datos_limpios.csv`.
 
-**Por que:** el dataset procesado conserva las 5630 filas y resuelve los faltantes numericos mediante la limpieza definida previamente. Esto permite graficar y testear hipotesis sin perder registros por nulos.
+**Por que:** el dataset procesado conserva 5.074 perfiles luego de eliminar duplicados y resuelve los faltantes numericos mediante la limpieza definida previamente. Esto permite graficar y testear hipotesis sin perder registros adicionales por nulos.
 
 **Alternativas descartadas:** hacer el EDA directamente sobre `data/raw/datos.csv` y dropear nulos variable por variable en cada analisis.
 
@@ -140,7 +140,7 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Que decidimos:** evaluar cada hipotesis mirando p-valor, tamano de efecto, direccion del resultado y lectura comercial.
 
-**Por que:** con 5630 registros, diferencias chicas pueden resultar estadisticamente significativas. Un p-valor bajo no implica automaticamente que la variable sea importante para negocio o para un futuro modelo.
+**Por que:** con 5.074 registros, diferencias chicas pueden resultar estadisticamente significativas. Un p-valor bajo no implica automaticamente que la variable sea importante para negocio o para un futuro modelo.
 
 **Alternativas descartadas:** clasificar hipotesis como confirmadas solo porque `p < 0.05`.
 
@@ -267,17 +267,17 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Consecuencias:** el EDA queda alimentado por `datos_limpios.csv` con categorias consolidadas, y el pipeline de modelado ya no necesita hacer esta limpieza. Las features transformadas quedan en 33 columnas.
 
-## Decision 23 - Usar ROC-AUC como metrica principal de modelado
+## Decision 23 - Usar PR-AUC como metrica principal de seleccion
 
 **Fecha:** 2026-06-08
 
-**Que decidimos:** evaluar y comparar todos los modelos usando ROC-AUC como metrica principal, y reportar ademas F1, recall y precision.
+**Que decidimos:** seleccionar los hiperparametros del Random Forest maximizando PR-AUC (`average_precision`) en validacion cruzada, y reportar ademas ROC-AUC, F1, recall, precision y F2.
 
-**Por que:** el dataset tiene desbalance de clases (~17% churn). Accuracy es misleading: un modelo que predice "nadie churna" alcanza 83% sin aprender nada. ROC-AUC mide separabilidad independientemente del umbral y es robusta al desbalance. Recall es critico para el negocio porque falsos negativos (churners no detectados) tienen mayor costo que falsos positivos.
+**Por que:** el dataset tiene desbalance de clases (~17% churn). Accuracy es misleading: un modelo que predice "nadie churna" alcanza 83% sin aprender nada. PR-AUC se concentra en la calidad del ranking de la clase positiva y penaliza el deterioro de precision al buscar mayor recall, por lo que esta mejor alineada con la deteccion de churners. ROC-AUC se mantiene como metrica complementaria de separabilidad global. Recall es critico para el negocio porque los falsos negativos tienen mayor costo que los falsos positivos.
 
-**Alternativas descartadas:** usar accuracy como metrica principal; usar solo F1 sin ROC-AUC.
+**Alternativas descartadas:** usar accuracy como metrica principal; seleccionar por ROC-AUC, que pondera ambas clases y puede resultar optimista con desbalance; seleccionar directamente por F2, que requiere fijar un umbral durante el ajuste de hiperparametros.
 
-**Consecuencias:** el GridSearchCV usa `scoring='roc_auc'` para seleccionar el mejor modelo. El reporte final incluye la curva ROC, matriz de confusion y el reporte de clasificacion completo por clase.
+**Consecuencias:** el GridSearchCV usa `scoring='average_precision'`. PR-AUC selecciona la configuracion del modelo; F2 sigue calibrando el umbral operativo mediante predicciones out-of-fold. La evaluacion final reporta PR-AUC y ROC-AUC y genera ambas curvas.
 
 ## Decision 24 - Agregar 4 features derivadas de negocio al pipeline
 
@@ -295,37 +295,37 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Fecha:** 2026-06-08
 
-**Que decidimos:** usar Random Forest como modelo principal para la evaluacion en test set y para el analisis SHAP. El Decision Tree optimizado se mantiene como comparacion baseline interpretable.
+**Que decidimos:** usar `DummyClassifier(strategy="most_frequent")` como baseline ingenuo y Random Forest como modelo principal para la evaluacion final y el analisis SHAP.
 
-**Por que:** los resultados de CV son concluyentes: RF logro ROC-AUC 0.9791 frente a 0.9115 del DT optimizado y 0.8715 del baseline. En test set: RF ROC-AUC 0.9976, recall 96.3%, F1 93.4% frente a DT ROC-AUC 0.9415, F1 77.9%. La diferencia es suficientemente grande como para justificar el modelo mas complejo.
+**Por que:** el DummyClassifier establece un piso reproducible que no aprende relaciones entre las variables y el target: siempre predice la clase mayoritaria (`Churn=0`). Esto deja en evidencia que una accuracy cercana al 83% no implica capacidad para detectar churn. En validacion cruzada, el dummy obtiene ROC-AUC 0.5000, PR-AUC 0.1658 y F1, recall, precision y F2 iguales a 0, mientras que el RF regularizado alcanza ROC-AUC 0.9485, PR-AUC 0.8122, F1 0.7282, recall 0.7741, precision 0.6882 y F2 0.7549. En test, el RF con umbral optimizado logra ROC-AUC 0.9515, PR-AUC 0.8362, recall 0.9643, precision 0.5062 y F2 0.8165, frente a ROC-AUC 0.5000, PR-AUC 0.1655 y metricas de clase positiva iguales a 0 para el dummy.
 
-**Alternativas descartadas:** usar el DT optimizado como modelo principal por mayor interpretabilidad; reportar solo el baseline como pide la consigna y omitir RF.
+**Alternativas descartadas:** usar un unico modelo sin baseline; usar un baseline aleatorio con `strategy="stratified"`, que hace menos estable la comparacion; omitir Random Forest y sus relaciones no lineales.
 
-**Consecuencias:** el reporte ejecutivo y la defensa oral se apoyan en Random Forest para metricas finales y en SHAP para explicabilidad. El DT se menciona como baseline y para mostrar la regla de decision mas simple.
+**Consecuencias:** el notebook compara `DummyClassifier (most_frequent)` y Random Forest. El reporte usa el baseline para mostrar el valor predictivo agregado y se apoya en Random Forest para las metricas finales, la priorizacion de clientes y la explicabilidad con SHAP.
 
-## Decision 26 - Mejores hiperparametros del Random Forest (run 2026-06-08)
+## Decision 26 - Configuracion final del Random Forest
 
 **Fecha:** 2026-06-08
 
-**Que decidimos:** usar `n_estimators=200`, `max_depth=None`, `min_samples_leaf=1`, `max_features='sqrt'`, `class_weight='balanced'` como configuracion final del Random Forest.
+**Que decidimos:** usar `n_estimators=200`, `max_depth=12`, `min_samples_leaf=5`, `min_samples_split=10`, `max_features='sqrt'`, `class_weight='balanced_subsample'`, `max_samples=0.85` y `bootstrap=True` como configuracion final del Random Forest.
 
-**Por que:** estos parametros surgieron del GridSearchCV con 48 combinaciones y CV estratificada de 5 folds. `max_depth=None` indica que los arboles crecen hasta hojas puras, lo que con `min_samples_leaf=1` puede implicar cierto overfitting en train, pero el ROC-AUC de test (0.9976) supera al CV (0.9791), lo que confirma que el modelo generaliza bien.
+**Por que:** estos parametros surgieron de GridSearchCV optimizado por PR-AUC con validacion cruzada estratificada de 5 folds. La profundidad y el tamano minimo de hoja limitan la complejidad; `max_features='sqrt'`, `max_samples=0.85` y `class_weight='balanced_subsample'` aumentan la diversidad y ajustan el peso de clases dentro de cada muestra bootstrap. La corrida registrada obtuvo PR-AUC train 0.9467, PR-AUC CV 0.8122 y una brecha de 0.1345.
 
-**Alternativas descartadas:** limitar `max_depth` para reducir complejidad; usar `class_weight='balanced_subsample'` que no fue el mejor en CV.
+**Alternativas descartadas:** permitir arboles sin limite de profundidad y hojas de una observacion; usar `class_weight='balanced'`, que obtuvo una PR-AUC CV ligeramente inferior; eliminar el muestreo parcial de observaciones por arbol.
 
 **Consecuencias:** el modelo final queda guardado en `outputs/models/best_rf.pkl`. Si se corre el notebook en otro ambiente, el GridSearch puede devolver parametros ligeramente distintos dependiendo de la version de scikit-learn.
 
-## Decision 27 - Presentar dos umbrales de clasificacion segun costo de negocio
+## Decision 27 - Calibrar el umbral sin utilizar el test set
 
 **Fecha:** 2026-06-08
 
-**Que decidimos:** no fijar un umbral unico de produccion. Presentar dos opciones con sus tradeoffs cuantificados para que el negocio elija segun el costo real de sus acciones de retencion.
+**Que decidimos:** calibrar el umbral de clasificacion usando probabilidades out-of-fold generadas exclusivamente sobre train con validacion cruzada estratificada de 5 folds.
 
-**Por que:** perder un cliente churner tiene costo permanente (revenue perdido, boca a boca negativo). Contactar a un no-churner con una accion de retencion tiene costo bajo y reversible. El umbral optimo depende de esa asimetria, que el equipo de negocio conoce mejor que el modelo. Umbral 0.35: recall 100% (190/190 churners detectados), precision 78%, 53 falsos positivos. Umbral 0.465 (F2-optimo, recall pesa el doble que precision): recall 98.4% (187/190), 3 churners perdidos, 21 falsos positivos.
+**Por que:** elegir el umbral directamente sobre test contaminaria la evaluacion final. Las predicciones out-of-fold permiten seleccionar el punto de corte con observaciones que no fueron vistas por el modelo que las predijo, manteniendo el test reservado para la medicion final.
 
-**Alternativas descartadas:** fijar el umbral en 0.5 default (deja 7 churners sin detectar); optimizar scoring='recall' en GridSearchCV (innecesario con ROC-AUC 0.9976: la separabilidad ya es excelente, el ajuste fino es de umbral, no de hiperparametros).
+**Alternativas descartadas:** optimizar el umbral sobre test; usar 0.50 por defecto sin analizar el costo asimetrico de falsos negativos y falsos positivos; seleccionar hiperparametros y umbral en una unica evaluacion sobre test.
 
-**Consecuencias:** el reporte ejecutivo y la defensa oral presentan ambas opciones. Si el costo de una accion de retencion es bajo, se recomienda 0.35 (cobertura total). Si hay restriccion presupuestaria o de capacidad operativa, se recomienda 0.465 (F2-optimo). La tabla completa de tradeoffs queda en el notebook (seccion 8).
+**Consecuencias:** el umbral queda almacenado en `outputs/models/threshold_f2_cv.json` y luego se aplica una sola vez sobre test para calcular las metricas finales y construir la estrategia de intervencion.
 
 
 ## Decision 28 - Mantener SimpleImputer con mediana en el pipeline de modelado
@@ -356,21 +356,21 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** reemplazar el Random Forest optimizado con arboles libres por un Random Forest regularizado en `notebooks/4. Modeler.ipynb`. La nueva grilla usa `n_estimators=200`, `max_depth=[6, 8, 10, 12]`, `min_samples_leaf=[5, 10, 20]`, `min_samples_split=[10, 20, 40]`, `max_features='sqrt'`, `class_weight=['balanced', 'balanced_subsample']` y `max_samples=[0.70, 0.85]` con `bootstrap=True` y `return_train_score=True`.
+**Que decidimos:** buscar el Random Forest final dentro de una grilla regularizada en `notebooks/4. Modeler.ipynb`: `n_estimators=200`, `max_depth=[6, 8, 10, 12]`, `min_samples_leaf=[5, 10, 20]`, `min_samples_split=[10, 20, 40]`, `max_features='sqrt'`, `class_weight=['balanced', 'balanced_subsample']` y `max_samples=[0.70, 0.85]`, con `bootstrap=True` y `return_train_score=True`.
 
-**Por que:** la configuracion anterior permitia `max_depth=None` y `min_samples_leaf=1`, una combinacion demasiado flexible para un modelo de arboles y con riesgo de memorizar train. La nueva grilla fuerza regularizacion estructural, mantiene diversidad entre arboles y permite medir explicitamente el gap train-CV. En la corrida registrada, el mejor RF regularizado fue `class_weight='balanced'`, `max_depth=12`, `max_samples=0.85`, `min_samples_leaf=5`, `min_samples_split=10`, con ROC-AUC train CV interno 0.9922, ROC-AUC validacion CV 0.9524 y gap ROC-AUC 0.0398.
+**Por que:** la grilla fuerza regularizacion estructural, mantiene diversidad entre arboles y permite medir explicitamente el gap train-CV. Al seleccionar por PR-AUC, el mejor RF fue `class_weight='balanced_subsample'`, `max_depth=12`, `max_samples=0.85`, `min_samples_leaf=5` y `min_samples_split=10`, con PR-AUC train 0.9467, PR-AUC CV 0.8122 y gap 0.1345. Como referencia complementaria, obtuvo ROC-AUC CV 0.9485.
 
-**Alternativas descartadas:** mantener el RF anterior con `max_depth=None` y hojas puras; elegir el Decision Tree optimizado como modelo final solo por interpretabilidad; eliminar RF para evitar complejidad. El DT optimizado queda como comparador interpretable, pero el RF regularizado sigue superandolo en test segun la corrida registrada: ROC-AUC 0.9690 y recall 0.8368 frente a ROC-AUC 0.9415 y recall 0.7789 del DT.
+**Alternativas descartadas:** permitir `max_depth=None` y hojas puras; usar solamente el DummyClassifier; usar un Random Forest sin medir el gap entre train y validacion.
 
-**Consecuencias:** el notebook ahora reporta comparacion CV entre `DT baseline`, `DT optimizado` y `RF regularizado`, agrega chequeo de overfitting train vs CV para RF, actualiza la narrativa de SHAP y evalua en test set el RF regularizado. Hay que re-ejecutar `notebooks/4. Modeler.ipynb` para regenerar los outputs y graficos de `outputs/models`.
+**Consecuencias:** el notebook reporta la comparacion CV entre `DummyClassifier (most_frequent)` y `RF regularizado`, incluye el chequeo de overfitting train vs CV, genera explicaciones SHAP y evalua el Random Forest final sobre test.
 
 ## Decision 31 - Agregar feature de clusterizacion K-Means al pipeline de modelado
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** agregar la pertenencia al cluster K-Means como feature numerica entera (`kmeans_cluster`) en el notebook de modelado. El K-Means se ajusta solo sobre `X_train` usando las 16 features continuas escaladas (`BASE_NUMERIC_FEATURES + DERIVED_NUMERIC_FEATURES`). El numero de clusters se determina por coeficiente de silueta evaluado en k=2 a k=5; el resultado fue k=2 con silueta=0.4154.
+**Que decidimos:** agregar la pertenencia al cluster K-Means como feature numerica entera (`kmeans_cluster`) en el notebook de modelado. El K-Means se ajusta solo sobre `X_train` usando las 16 features continuas escaladas (`BASE_NUMERIC_FEATURES + DERIVED_NUMERIC_FEATURES`). El numero de clusters se determina por coeficiente de silueta evaluado en k=2 a k=5; el resultado actualizado fue k=2 con silueta=0.4293.
 
-**Por que:** la separacion natural en 2 clusters (3803 y 701 observaciones en train) coincide estrechamente con la proporcion de churn del dataset (~16.8%). El cluster captura estructura latente en el espacio de features que el modelo supervisado puede no descubrir facilmente en la primera iteracion. En CV, agregar esta feature mejoro el recall promedio de 79.6% a 87.1% y ROC-AUC de 0.9523 a 0.9529. En test, el recall paso de 84.7% a 89.5%.
+**Por que:** la separacion en 2 clusters (3.426 y 633 observaciones en train) captura estructura latente en el espacio de features continuas y puede aportar una sintesis adicional al modelo supervisado.
 
 **Alternativas descartadas:** usar K-Means sobre todas las 39 features incluyendo OHE (las flags binarias tienen IQR nulo y distorsionan la metrica euclidiana; las columnas OHE aportan informacion categorica ya presente de otro modo); aplicar K-Means dentro del pipeline sklearn (habria requerido un transformer custom para no romper la secuencia de pasos existente).
 
@@ -380,31 +380,31 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** usar F2 (beta=2) para determinar el umbral de clasificacion optimo. El umbral optimo encontrado es 0.380.
+**Que decidimos:** usar F2 (beta=2) para determinar el umbral de clasificacion optimo. El umbral calibrado con predicciones out-of-fold es 0.291.
 
-**Por que:** para la estrategia de intervencion final se prioriza recall sobre precision: perder un cliente churner sin intervenir es mas grave que contactar de mas con una accion de bajo costo. Con beta=2, el F-score pondera recall mas que precision. El umbral 0.380 maximiza ese score en el test set y logra recall=93.2% con precision=61.5%, detectando 177 de 190 churners.
+**Por que:** para la estrategia de intervencion final se prioriza recall sobre precision: perder un cliente churner sin intervenir es mas grave que contactar de mas con una accion de bajo costo. Con beta=2, el F-score pondera recall mas que precision. En CV out-of-fold, el umbral 0.291 logra F2=0.8060, recall=0.9435 y precision=0.5092. Aplicado sobre test, logra F2=0.8165, recall=0.9643 y precision=0.5062.
 
 **Alternativas descartadas:** usar un criterio orientado a precision (deja demasiados churners sin cubrir); fijar umbral 0.50 por defecto como unico criterio (mejora precision, pero pierde cobertura); usar un umbral muy bajo orientado a recall puro (vuelve la campana poco eficiente operativamente).
 
-**Consecuencias:** con el umbral F2-optimo (0.380), el sistema amplía la cobertura y deja solo 13 churners sin intervención. La precision baja frente a un criterio mas estricto, por lo que la estrategia segmentada reserva la accion costosa para `proba >= 0.50` y usa acciones baratas para el rango 0.380-0.50.
+**Consecuencias:** con el umbral F2-optimo (0.291), el sistema detecta 162 de los 168 churners del test y deja 6 sin intervencion. La estrategia segmentada reserva la accion costosa para `proba >= 0.50` y usa acciones baratas para el rango 0.291-0.50.
 
 ## Decision 33 - Estrategia de intervencion segmentada con dos umbrales
 
 **Fecha:** 2026-06-12
 
-**Que decidimos:** en lugar de elegir un umbral unico, usar dos umbrales para asignar acciones proporcionales al nivel de riesgo de cada cliente: `threshold_high=0.50` para accion costosa y `threshold_low=0.380` (F2-optimo) para accion barata.
+**Que decidimos:** en lugar de elegir un umbral unico, usar dos umbrales para asignar acciones proporcionales al nivel de riesgo de cada cliente: `threshold_high=0.50` para accion costosa y `threshold_low=0.291` (F2-optimo) para accion barata.
 
-**Por que:** el enfoque de umbral unico fuerza una eleccion entre cobertura y costo operativo. La segmentacion en dos niveles los desacopla. Los 225 clientes con proba >= 0.50 incluyen 161 churners reales y justifican llamadas o descuentos significativos. Los 63 clientes adicionales en el rango 0.380-0.50 incluyen 16 churners reales, por lo que conviene tratarlos con una accion automatizable de bajo costo. Los 838 clientes con proba < 0.380 no reciben intervencion.
+**Por que:** el enfoque de umbral unico fuerza una eleccion entre cobertura y costo operativo. La segmentacion en dos niveles los desacopla. Los 203 clientes con proba >= 0.50 incluyen 134 churners reales y justifican llamadas o descuentos significativos. Los 117 clientes adicionales en el rango 0.291-0.50 incluyen 28 churners reales, por lo que conviene tratarlos con una accion automatizable de bajo costo. Los 695 clientes con proba < 0.291 no reciben intervencion.
 
-**Alternativas descartadas:** umbral unico en 0.50 (deja 16 churners adicionales sin alcanzar); umbral unico en 0.380 (obliga a hacer accion costosa sobre todos los casos positivos, incluyendo 111 falsos positivos).
+**Alternativas descartadas:** umbral unico en 0.50 (deja 28 churners adicionales sin alcanzar); umbral unico en 0.291 (obliga a realizar la accion costosa sobre todos los casos positivos, incluyendo 158 falsos positivos).
 
-**Consecuencias:** el sistema cubre el 93.2% de los churners del test set (177/190). El presupuesto de retencion se divide en: 225 intervenciones de alto costo + 63 de bajo costo. Esta propuesta es accionable en cualquier CRM que soporte segmentacion por probabilidad de churn.
+**Consecuencias:** el sistema cubre el 96.4% de los churners del test set (162/168). El presupuesto de retencion se divide en 203 intervenciones de alto costo y 117 de bajo costo. Esta propuesta es accionable en cualquier CRM que soporte segmentacion por probabilidad de churn.
 
 ## Decision 34 - Crear notebook de graficos de negocio
 
 **Fecha:** 2026-06-13
 
-**Que decidimos:** crear `notebooks/5. Gráficos de negocio.ipynb` como notebook independiente para traducir el modelo de churn a visualizaciones accionables para negocio. El notebook carga el modelo final `outputs/models/best_rf.pkl`, reconstruye la feature `kmeans_cluster`, calcula el umbral F2 optimo (`beta=2`) y arma los segmentos de intervencion.
+**Que decidimos:** crear `notebooks/5. Gráficos de negocio.ipynb` como notebook independiente para traducir el modelo de churn a visualizaciones accionables para negocio. El notebook carga el modelo final `outputs/models/best_rf.pkl`, reconstruye la feature `kmeans_cluster`, carga el umbral F2 calibrado mediante CV y arma los segmentos de intervencion.
 
 **Por que:** el notebook de modelado contiene la evaluacion tecnica, pero para presentar el caso de negocio conviene separar graficos de decision: tamanio de segmentos, churners capturados, trade-off precision/recall, perfil promedio de clientes por segmento y lista priorizada para CRM.
 
@@ -459,3 +459,15 @@ Este archivo registra decisiones efectivas del proyecto: elecciones metodologica
 **Alternativas descartadas:** mantener KNN en el notebook de limpieza y mediana en modelado; usar media; eliminar filas con nulos.
 
 **Consecuencias:** `notebooks/1. Limpieza de datos.ipynb`, `data/processed/datos_limpios.csv`, `reports/02_data_quality.md` y la narrativa de la presentacion quedan consistentes: no se usa KNN para imputar.
+
+## Decision 39 - Eliminar perfiles exactamente duplicados
+
+**Fecha:** 2026-06-18
+
+**Que decidimos:** eliminar perfiles exactamente duplicados considerando todas las columnas excepto `CustomerID`, conservando la primera aparicion de cada perfil.
+
+**Por que:** se detectaron 556 filas adicionales cuyo target y atributos eran identicos a los de otro registro; la unica diferencia era el identificador. Mantener ambas observaciones sobreponderaria esos perfiles en el EDA y el modelado.
+
+**Alternativas descartadas:** mantener los registros por tener IDs diferentes; eliminar automaticamente todos los pares sinteticamente relacionados aunque presenten diferencias en sus variables.
+
+**Consecuencias:** `data/processed/datos_limpios.csv` pasa de 5.630 a 5.074 filas y conserva 841 churners, con una tasa de churn de 16,57%. Se regeneran los artefactos de EDA, split, entrenamiento, modelado y negocio sobre esta version deduplicada.

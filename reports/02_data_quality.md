@@ -3,7 +3,8 @@
 ## Dataset auditado
 
 - Fuente usada para el proyecto: `data/raw/datos.csv`
-- Filas: 5630
+- Filas raw: 5630
+- Filas luego de eliminar 556 perfiles exactamente duplicados: 5074
 - Columnas: 20
 - Target: `Churn`
 - Tasa de churn: 16.84%
@@ -48,6 +49,7 @@ Tambien se estandarizan categorias equivalentes antes de guardar `data/processed
 
 - Caracterizacion antes de intervenir: realizada.
 - Nulos antes y despues: documentados en notebook.
-- Duplicados y tipos: incluidos como chequeos en notebook.
+- Duplicados: se eliminan perfiles idénticos considerando todas las columnas excepto `CustomerID`, conservando la primera aparición.
+- Duplicados y tipos: incluidos como chequeos reproducibles en el notebook.
 - Supuestos de imputacion: documentados.
 - Limpieza reproducible: `notebooks/1. Limpieza de datos.ipynb`.

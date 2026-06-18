@@ -4,10 +4,13 @@ Trabajo Practico 3 de Inteligencia Artificial Aplicada a los Negocios (81.91) - 
 
 El objetivo es predecir que clientes de un e-commerce tienen mayor probabilidad de abandonar la plataforma, y traducir esos resultados en acciones de retencion accionables para el negocio.
 
+El Random Forest se selecciona mediante **PR-AUC en validacion cruzada**, una metrica enfocada en la clase churn minoritaria. Luego, el umbral operativo se calibra mediante **F2** para priorizar recall.
+
 ## Dataset
 
 - **Fuente:** `data/raw/datos.csv`
-- **Registros:** 5630 clientes
+- **Registros raw:** 5630 clientes
+- **Registros procesados:** 5074 clientes luego de eliminar 556 perfiles duplicados
 - **Variables:** 20 columnas (1 ID + 1 target `Churn` + 18 features)
 - **Desbalance:** ~17% clase positiva (churn = 1)
 
@@ -29,6 +32,7 @@ src/
     pipeline.py  # Pipeline reproducible de feature engineering
 outputs/
   eda/           # Graficos generados por el EDA
+  models/        # Modelo final, curvas ROC/Precision-Recall, SHAP y umbral F2
 reports/
   00_contexto_negocio.md  # Pregunta de negocio y criterio de exito
   01_hipotesis.md         # Hipotesis escritas por el equipo antes del EDA

@@ -3,7 +3,7 @@
 **Input**: `data/processed/datos_limpios.csv`
 **Modo**: ML
 **Output**: `data/processed/features_train.parquet`, `data/processed/features_test.parquet`
-**Split**: 4504 train / 1126 test - stratify=True - random_state=42
+**Split**: 4059 train / 1015 test - stratify=True - random_state=42
 
 ---
 
@@ -60,8 +60,8 @@ Preparar datos listos para modelado de churn sin entrenar modelos ni hacer featu
 | `data/processed/split/X_test.csv` | Features raw de test luego de drops. |
 | `data/processed/split/y_train.csv` | Target de train. |
 | `data/processed/split/y_test.csv` | Target de test. |
-| `data/processed/features_train.parquet` | Features transformadas de train, 4504 x 33. |
-| `data/processed/features_test.parquet` | Features transformadas de test, 1126 x 33. |
+| `data/processed/features_train.parquet` | Features transformadas de train, 4059 x 38. |
+| `data/processed/features_test.parquet` | Features transformadas de test, 1015 x 38. |
 
 ---
 
@@ -72,7 +72,7 @@ Preparar datos listos para modelado de churn sin entrenar modelos ni hacer featu
 - Fit de imputers/encoders/scalers solo sobre train: OK.
 - Test transformado solo con `.transform()`: OK.
 - Train/test sin nulos post-transformacion: OK.
-- Mismas 33 columnas transformadas en train y test: OK.
+- Mismas 38 columnas transformadas en train y test: OK.
 
 ---
 

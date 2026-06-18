@@ -4,9 +4,9 @@
 
 ## Feature Engineering - Resultado Final
 
-**Features disponibles**: 33 columnas transformadas  
-**Train shape**: 4504 x 33  
-**Test shape**: 1126 x 33  
+**Features disponibles**: 38 columnas transformadas antes de agregar `kmeans_cluster`
+**Train shape**: 4059 x 38
+**Test shape**: 1015 x 38
 **Pipeline**: `src/features/pipeline.py` - funcion `build_pipeline()`
 
 ## Archivos

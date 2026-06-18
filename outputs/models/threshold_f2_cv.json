@@ -1,10 +1,10 @@
 {
   "beta": 2.0,
-  "threshold": 0.31842098059169044,
-  "fbeta_cv_oof": 0.815416285452882,
-  "precision_cv_oof": 0.5320895522388059,
-  "recall_cv_oof": 0.9406332453825857,
+  "threshold": 0.2911988340627046,
+  "fbeta_cv_oof": 0.8060421426758061,
+  "precision_cv_oof": 0.5092221331194867,
+  "recall_cv_oof": 0.9435364041604755,
   "cv_folds": 5,
-  "cv_size": 4504,
-  "cv_churners": 758
+  "cv_size": 4059,
+  "cv_churners": 673
 }

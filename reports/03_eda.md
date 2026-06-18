@@ -21,7 +21,7 @@ Las señales mas fuertes aparecen en `Tenure` y `Complain`. Los clientes nuevos 
 
 `CashbackAmount` tambien muestra una diferencia relevante: los clientes que churnearon tienen menor cashback mediano. Sin embargo, esta variable debe interpretarse con cautela porque puede estar relacionada con nivel de actividad o valor del cliente, no necesariamente con el beneficio como causa directa.
 
-`OrderCount` muestra una asociacion estadistica, pero debil en terminos practicos. La diferencia entre clientes activos y churners no parece suficientemente grande como para explicar el abandono por si sola.
+`OrderCount` no muestra evidencia estadistica suficiente de una diferencia entre clientes activos y churners luego de eliminar los perfiles duplicados. Las medianas son iguales y el tamano de efecto es practicamente nulo.
 
 `SatisfactionScore` y `DaySinceLastOrder` generan resultados contraintuitivos: salen significativos, pero en direccion contraria a la hipotesis inicial. Estos casos requieren revision manual antes de usarlos como conclusiones.
 
@@ -41,7 +41,7 @@ Las señales mas fuertes aparecen en `Tenure` y `Complain`. Los clientes nuevos 
 
 **Hipotesis:** Los clientes con reclamos tienden a churnear mas.
 
-**Resultado:** La hipotesis se sostiene. Los clientes con reclamos tienen una tasa de churn de 31.7%, frente a 10.9% en clientes sin reclamos.
+**Resultado:** La hipotesis se sostiene. Los clientes con reclamos tienen una tasa de churn de 31.3%, frente a 10.8% en clientes sin reclamos.
 
 **Lectura de negocio:** Los reclamos parecen estar asociados a una peor experiencia y mayor abandono. Es una variable accionable: mejorar resolucion de reclamos podria reducir churn o ayudar a priorizar contacto preventivo.
 
@@ -61,17 +61,17 @@ Las señales mas fuertes aparecen en `Tenure` y `Complain`. Los clientes nuevos 
 
 **Hipotesis:** Los clientes con menor `OrderCount` tienden a churnear mas.
 
-**Resultado:** El test detecta diferencia estadistica, pero el efecto es bajo. La mediana de `OrderCount` es igual para churners y no churners.
+**Resultado:** La hipotesis no queda respaldada. El test Mann-Whitney no detecta una diferencia estadisticamente significativa (`p = 0.159`), el tamano de efecto es practicamente nulo y la mediana de `OrderCount` es igual para churners y no churners.
 
 **Lectura de negocio:** `OrderCount` puede aportar contexto, pero no parece una señal fuerte de churn por si sola. Conviene evaluarla junto con otras variables como `Tenure`, `CouponUsed` o `CashbackAmount`.
 
-**Estado:** Hallazgo debil.
+**Estado:** Sin evidencia suficiente.
 
 ### H5 - CashbackAmount
 
 **Hipotesis:** Los clientes con menor `CashbackAmount` tienden a churnear mas.
 
-**Resultado:** La hipotesis se sostiene parcialmente. Los clientes que churnearon tienen menor cashback mediano que los clientes activos: 150 frente a 166.
+**Resultado:** La hipotesis se sostiene parcialmente. Los clientes que churnearon tienen menor cashback mediano que los clientes activos: 151 frente a 166.
 
 **Lectura de negocio:** Menor cashback puede estar asociado con menor incentivo, menor volumen de compra o menor relacion previa con la plataforma. No debe interpretarse automaticamente como causalidad directa.
 
@@ -81,7 +81,7 @@ Las señales mas fuertes aparecen en `Tenure` y `Complain`. Los clientes nuevos 
 
 **Hipotesis:** Los clientes con mas dias desde su ultima orden tienden a churnear mas.
 
-**Resultado:** La hipotesis no se confirma. En los datos observados ocurre lo contrario: los clientes que churnearon tienen una mediana de 2 dias desde la ultima orden, frente a 4 dias en clientes activos.
+**Resultado:** La hipotesis no se confirma. Las medianas son iguales en ambos grupos (3 dias), pero la distribucion y las tasas agrupadas muestran una relacion inversa: el churn es mayor cuando la ultima orden es mas reciente.
 
 **Lectura de negocio:** `DaySinceLastOrder` no debe interpretarse de forma directa como inactividad previa al abandono sin revisar como fue construida la variable. Puede estar medida de una manera que no captura el momento real de decision de churn.
 
@@ -96,7 +96,7 @@ Las señales mas fuertes aparecen en `Tenure` y `Complain`. Los clientes nuevos 
 | Media | `CashbackAmount` | Moderado | Diferencia visible, pero posible relacion con actividad o valor del cliente. |
 | Media | `DaySinceLastOrder` | Contraintuitivo | Resultado significativo pero opuesto a la hipotesis. |
 | Media | `SatisfactionScore` | Contraintuitivo | Patron opuesto a la intuicion de negocio. |
-| Baja | `OrderCount` | Debil | Asociacion estadistica con bajo tamano de efecto. |
+| Baja | `OrderCount` | Sin evidencia | Test no significativo y tamano de efecto practicamente nulo. |
 
 ## Puntos para revision manual
 
@@ -128,7 +128,7 @@ Se agregaron dos hipotesis principales al notebook `notebooks/2. EDA guiado por 
 
 **Hipotesis:** Los clientes que realizaron reclamos (`Complain = 1`) y tienen baja satisfaccion presentan el mayor riesgo de churn.
 
-**Resultado:** La combinacion de reclamos y satisfaccion muestra una asociacion estadisticamente significativa con churn. El test chi-cuadrado arroja p-valor < 0.001 y Cramer's V = 0.282. Sin embargo, el segmento con baja satisfaccion y reclamo no es el de mayor churn: presenta 22.1%, mientras que los clientes con reclamo y satisfaccion alta llegan a 37.3% y con satisfaccion media a 36.2%.
+**Resultado:** La combinacion de reclamos y satisfaccion muestra una asociacion estadisticamente significativa con churn. El test chi-cuadrado arroja p-valor < 0.001 y Cramer's V = 0.278. Sin embargo, el segmento con baja satisfaccion y reclamo no es el de mayor churn: presenta 21.7%, mientras que los clientes con reclamo y satisfaccion 4 y 5 llegan a 37.8% y 37.2%, respectivamente.
 
 **Lectura de negocio:** La parte fuerte de la hipotesis es el efecto del reclamo: reclamar aumenta claramente el riesgo en todos los niveles de satisfaccion. La parte debil es asumir que la baja satisfaccion explica por si sola el mayor riesgo. El resultado refuerza que `SatisfactionScore` debe interpretarse con cautela, como ya habia ocurrido en H3.
 
@@ -140,7 +140,7 @@ Se agregaron dos hipotesis principales al notebook `notebooks/2. EDA guiado por 
 
 **Variable creada:** `ValorCliente = OrderCount * CashbackAmount`; segmento VIP = cuartil superior de `ValorCliente`.
 
-**Resultado:** La hipotesis se sostiene con claridad. Dentro del segmento VIP, los clientes sin reclamo tienen churn de 8.3%, mientras que los VIP con reclamo llegan a 27.0%. El test chi-cuadrado arroja p-valor < 0.001 y Cramer's V = 0.243.
+**Resultado:** La hipotesis se sostiene con claridad. Dentro del segmento VIP, los clientes sin reclamo tienen churn de 8.6%, mientras que los VIP con reclamo llegan a 30.4%. El test chi-cuadrado arroja p-valor < 0.001 y Cramer's V = 0.273.
 
 **Lectura de negocio:** Este es uno de los hallazgos mas accionables: combina riesgo de abandono con impacto economico. El segmento VIP con reclamo deberia ser candidato prioritario para acciones de retencion.
 
